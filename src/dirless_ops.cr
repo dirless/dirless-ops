@@ -14,6 +14,7 @@ require "./dirless/ops/models/customer"
 require "./dirless/ops/models/node"
 require "./dirless/ops/models/health_check"
 require "./dirless/ops/models/customer_account"
+require "./dirless/ops/models/provision_job"
 require "./dirless/ops/middleware/api_key"
 require "./dirless/ops/poller"
 require "./dirless/ops/routes/health"
@@ -21,6 +22,7 @@ require "./dirless/ops/routes/customers"
 require "./dirless/ops/routes/nodes"
 require "./dirless/ops/routes/status"
 require "./dirless/ops/routes/portal"
+require "./dirless/ops/routes/provision_jobs"
 
 module Dirless
   module Ops
@@ -87,7 +89,13 @@ module Dirless
 
           scope "/portal" do
             post "/register", Controllers::PortalRegister
-            post "/login",    Controllers::PortalLogin
+            post "/login", Controllers::PortalLogin
+          end
+
+          scope "/provision-jobs" do
+            get "/", Controllers::ListProvisionJobs
+            get "/:id", Controllers::GetProvisionJob
+            patch "/:id", Controllers::UpdateProvisionJob
           end
         end
       end

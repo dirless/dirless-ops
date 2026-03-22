@@ -62,6 +62,19 @@ module Dirless
         )
       SQL
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_customer_accounts_email ON customer_accounts (email)",
+      <<-SQL,
+        CREATE TABLE IF NOT EXISTS provision_jobs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_name TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          error TEXT,
+          created_at DATETIME,
+          started_at DATETIME,
+          completed_at DATETIME
+        )
+      SQL
+      "CREATE INDEX IF NOT EXISTS idx_provision_jobs_status ON provision_jobs (status)",
+      "CREATE INDEX IF NOT EXISTS idx_provision_jobs_customer ON provision_jobs (customer_name)",
     ]
 
     def self.setup_db(database_path : String)

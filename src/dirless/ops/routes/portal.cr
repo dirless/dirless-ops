@@ -2,6 +2,7 @@ require "grip"
 require "json"
 require "../models/customer"
 require "../models/customer_account"
+require "../models/provision_job"
 
 module Dirless
   module Ops
@@ -19,16 +20,16 @@ module Dirless
             return context.put_status(400).json({"error" => "malformed JSON: #{ex.message}"}).halt
           end
 
-          email   = parsed["email"]?.try(&.as_s).to_s.strip.downcase
+          email = parsed["email"]?.try(&.as_s).to_s.strip.downcase
           password = parsed["password"]?.try(&.as_s).to_s
-          company  = parsed["company"]?.try(&.as_s).to_s.strip
+          company = parsed["company"]?.try(&.as_s).to_s.strip
 
           errors = {} of String => String
-          errors["email"]    = "Required"      if email.empty?
-          errors["email"]    = "Invalid email" unless email.includes?("@") && email.includes?(".")
-          errors["password"] = "Required"      if password.empty?
+          errors["email"] = "Required" if email.empty?
+          errors["email"] = "Invalid email" unless email.includes?("@") && email.includes?(".")
+          errors["password"] = "Required" if password.empty?
           errors["password"] = "Must be at least 12 characters" if !password.empty? && password.size < 12
-          errors["company"]  = "Required"      if company.empty?
+          errors["company"] = "Required" if company.empty?
 
           unless errors.empty?
             return context.put_status(422).json({"error" => errors.map { |f, m| "#{f}: #{m}" }.join("; "), "fields" => errors}).halt
@@ -69,6 +70,10 @@ module Dirless
             return context.put_status(422).json({"error" => account.errors.map(&.message).join(", ")}).halt
           end
 
+          # Queue a provision job for the deployer to pick up
+          job = ProvisionJob.new(customer_name: customer_name, status: "pending")
+          job.save
+
           context.put_status(201).json(account.to_response).halt
         end
       end
@@ -84,7 +89,7 @@ module Dirless
             return context.put_status(400).json({"error" => "malformed JSON: #{ex.message}"}).halt
           end
 
-          email    = parsed["email"]?.try(&.as_s).to_s.strip.downcase
+          email = parsed["email"]?.try(&.as_s).to_s.strip.downcase
           password = parsed["password"]?.try(&.as_s).to_s
 
           account = CustomerAccount.find_by(email: email)
