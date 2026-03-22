@@ -1,0 +1,253 @@
+class Portal::RegisterPage
+  include Lucky::HTMLPage
+
+  needs errors : Hash(String, String)
+  needs values : Hash(String, String)
+
+  def render
+    html_doctype
+    html lang: "en" do
+      head do
+        title "Create account — Dirless"
+        meta charset: "utf-8"
+        meta name: "viewport", content: "width=device-width, initial-scale=1"
+        raw "<style>#{register_css}</style>"
+      end
+      body do
+        div class: "auth-wrapper" do
+          div class: "auth-card" do
+            div class: "auth-logo" do
+              a href: "/" do
+                span "dir", class: "logo-main"
+                span "less", class: "logo-accent"
+              end
+            end
+            h1 "Create your account", class: "auth-heading"
+
+            if base_error = @errors["_base"]?
+              div class: "alert alert-error" do
+                text base_error
+              end
+            end
+
+            form action: "/portal/register", method: "post" do
+              div class: "form-group" do
+                label "Company name", for: "company", class: "form-label"
+                input type: "text", id: "company", name: "company",
+                  value: @values["company"]? || "",
+                  autofocus: "autofocus", autocomplete: "organization", required: "required",
+                  class: "form-input #{"form-input-error" unless (@errors["company"]?.nil?)}",
+                  placeholder: "Acme Inc."
+                if err = @errors["company"]?
+                  span err, class: "field-error"
+                end
+              end
+
+              div class: "form-group" do
+                label "Email", for: "email", class: "form-label"
+                input type: "email", id: "email", name: "email",
+                  value: @values["email"]? || "",
+                  autocomplete: "email", required: "required",
+                  class: "form-input #{"form-input-error" unless (@errors["email"]?.nil?)}",
+                  placeholder: "you@company.com"
+                if err = @errors["email"]?
+                  span err, class: "field-error"
+                end
+              end
+
+              div class: "form-group" do
+                label "Password", for: "password", class: "form-label"
+                input type: "password", id: "password", name: "password",
+                  autocomplete: "new-password", required: "required", minlength: "12",
+                  class: "form-input #{"form-input-error" unless (@errors["password"]?.nil?)}",
+                  placeholder: "At least 12 characters"
+                if err = @errors["password"]?
+                  span err, class: "field-error"
+                end
+              end
+
+              div class: "form-group" do
+                label "Confirm password", for: "confirm_password", class: "form-label"
+                input type: "password", id: "confirm_password", name: "confirm_password",
+                  autocomplete: "new-password", required: "required", minlength: "12",
+                  class: "form-input #{"form-input-error" unless (@errors["confirm_password"]?.nil?)}",
+                  placeholder: "Repeat your password"
+                if err = @errors["confirm_password"]?
+                  span err, class: "field-error"
+                end
+              end
+
+              button type: "submit", class: "btn-submit" do
+                text "Create account"
+              end
+            end
+
+            div class: "auth-footer" do
+              text "Already have an account? "
+              a "Sign in", href: "/portal/login"
+            end
+          end
+        end
+      end
+    end
+  end
+
+  private def register_css : String
+    <<-CSS
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --surface2: #1c2330;
+      --border:   #30363d;
+      --accent:   #58a6ff;
+      --accent2:  #3fb950;
+      --muted:    #8b949e;
+      --text:     #e6edf3;
+      --text-dim: #c9d1d9;
+      --danger:   #f85149;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .auth-wrapper {
+      width: 100%;
+      max-width: 440px;
+      padding: 1.5rem;
+    }
+
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.25rem 2rem;
+    }
+
+    .auth-logo {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .auth-logo a {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .logo-main { color: var(--text); }
+    .logo-accent { color: var(--accent); }
+
+    .auth-heading {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .alert {
+      padding: 0.65rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .alert-error {
+      background: rgba(248, 81, 73, 0.12);
+      border: 1px solid rgba(248, 81, 73, 0.35);
+      color: #ff7b72;
+    }
+
+    .form-group {
+      margin-bottom: 1.1rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 0.35rem;
+    }
+
+    .form-input {
+      display: block;
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.9rem;
+      color: var(--text);
+      font-family: inherit;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+
+    .form-input::placeholder {
+      color: var(--muted);
+    }
+
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+    }
+
+    .form-input-error {
+      border-color: var(--danger) !important;
+    }
+
+    .field-error {
+      display: block;
+      font-size: 0.8rem;
+      color: #ff7b72;
+      margin-top: 0.3rem;
+    }
+
+    .btn-submit {
+      display: block;
+      width: 100%;
+      background: var(--accent);
+      color: #0d1117;
+      border: none;
+      border-radius: 6px;
+      padding: 0.65rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      margin-top: 0.5rem;
+      transition: opacity 0.15s;
+    }
+
+    .btn-submit:hover {
+      opacity: 0.85;
+    }
+
+    .auth-footer {
+      text-align: center;
+      margin-top: 1.25rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    CSS
+  end
+end

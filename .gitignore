@@ -1,0 +1,6 @@
+/lib/
+/.shards/
+*.dwarf
+dirless-ops
+*.db
+/config/dirless-ops.toml

@@ -1,0 +1,15 @@
+name: dirless-ops-cli
+version: 0.1.0
+
+description: CLI for the Dirless ops daemon
+
+authors:
+  - Dirless <hello@dirless.io>
+
+license: Private
+
+crystal: ">= 1.9.0"
+
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba

@@ -1,0 +1,32 @@
+name: dirless-ops
+version: 0.1.0
+
+description: Centralized operations daemon for Dirless
+
+authors:
+  - Dirless <hello@dirless.io>
+
+license: Private
+
+crystal: ">= 1.9.0"
+
+dependencies:
+  grip:
+    github: grip-framework/grip
+    version: "~> 4.1.0"
+
+  granite:
+    github: amberframework/granite
+    version: "~> 0.23.0"
+
+  sqlite3:
+    github: crystal-lang/crystal-sqlite3
+    version: "~> 0.21.0"
+
+  toml:
+    github: crystal-community/toml.cr
+    version: "~> 0.8.1"
+
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba

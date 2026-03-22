@@ -1,0 +1,137 @@
+require "grip"
+require "json"
+require "../models/customer"
+
+module Dirless
+  module Ops
+    module Controllers
+      class ListCustomers
+        include Grip::Controllers::HTTP
+
+        def get(context : Context) : Context
+          customers = Customer.all
+          context.put_status(200).json(customers.map(&.to_response)).halt
+        end
+      end
+
+      class CreateCustomer
+        include Grip::Controllers::HTTP
+
+        def post(context : Context) : Context
+          body = context.request.body.try(&.gets_to_end) || ""
+          begin
+            parsed = JSON.parse(body)
+          rescue ex : JSON::ParseException
+            return context.put_status(400).json({"error" => "malformed JSON: #{ex.message}"}).halt
+          end
+
+          name = parsed["name"]?.try(&.as_s)
+          hmac_secret = parsed["hmac_secret"]?.try(&.as_s)
+
+          unless name && hmac_secret
+            return context.put_status(422).json({"error" => "name and hmac_secret are required"}).halt
+          end
+
+          errors = {} of String => String
+
+          unless name =~ /\A[a-z]{12}-\d+\z/
+            errors["name"] = "Must be 12 lowercase letters, a dash, then a port number (e.g. ewmilnqiuhxu-5000)"
+          end
+
+          port = name.split("-").last.to_i?
+          if port && (port < 1024 || port > 59999)
+            errors["name"] = "Port must be between 1024 and 59999"
+          end
+
+          unless hmac_secret =~ /\A[0-9a-f]{64}\z/
+            errors["hmac_secret"] = "Must be exactly 64 lowercase hex characters"
+          end
+
+          unless errors.empty?
+            return context.put_status(422).json({"error" => errors.map { |f, m| "#{f}: #{m}" }.join("; "), "fields" => errors}).halt
+          end
+
+          if Customer.where(name: name).exists?
+            return context.put_status(409).json({"error" => "customer already exists", "fields" => {"name" => "A customer with this name already exists"}}).halt
+          end
+
+          customer = Customer.new(
+            name: name,
+            hmac_secret: hmac_secret,
+            label: parsed["label"]?.try(&.as_s),
+            aws_account_id: parsed["aws_account_id"]?.try(&.as_s),
+            notes: parsed["notes"]?.try(&.as_s),
+          )
+
+          unless customer.save
+            return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
+          end
+
+          context.put_status(201).json(customer.to_response).halt
+        end
+      end
+
+      class GetCustomer
+        include Grip::Controllers::HTTP
+
+        def get(context : Context) : Context
+          name = context.fetch_path_params["name"]
+          customer = Customer.find_by(name: name)
+
+          unless customer
+            return context.put_status(404).json({"error" => "customer not found"}).halt
+          end
+
+          context.put_status(200).json(customer.to_response).halt
+        end
+      end
+
+      class UpdateCustomer
+        include Grip::Controllers::HTTP
+
+        def patch(context : Context) : Context
+          name = context.fetch_path_params["name"]
+          customer = Customer.find_by(name: name)
+
+          unless customer
+            return context.put_status(404).json({"error" => "customer not found"}).halt
+          end
+
+          body = context.request.body.try(&.gets_to_end) || ""
+          begin
+            parsed = JSON.parse(body)
+          rescue ex : JSON::ParseException
+            return context.put_status(400).json({"error" => "malformed JSON: #{ex.message}"}).halt
+          end
+
+          parsed["label"]?.try { |v| customer.label = v.as_s? }
+          parsed["hmac_secret"]?.try { |v| v.as_s?.try { |s| customer.hmac_secret = s } }
+          parsed["aws_account_id"]?.try { |v| customer.aws_account_id = v.as_s? }
+          parsed["notes"]?.try { |v| customer.notes = v.as_s? }
+
+          unless customer.save
+            return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
+          end
+
+          context.put_status(200).json(customer.to_response).halt
+        end
+      end
+
+      class DeleteCustomer
+        include Grip::Controllers::HTTP
+
+        def delete(context : Context) : Context
+          name = context.fetch_path_params["name"]
+          customer = Customer.find_by(name: name)
+
+          unless customer
+            return context.put_status(404).json({"error" => "customer not found"}).halt
+          end
+
+          customer.destroy
+          context.put_status(204).halt
+        end
+      end
+    end
+  end
+end

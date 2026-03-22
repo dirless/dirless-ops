@@ -1,0 +1,12 @@
+[server]
+host = "127.0.0.1"
+port = 5000
+
+[api]
+key = "replace-with-a-strong-random-secret"
+
+[database]
+path = "/var/lib/dirless-ops/ops.db"
+
+[polling]
+interval_seconds = 120
