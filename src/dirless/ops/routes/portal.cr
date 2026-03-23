@@ -39,40 +39,55 @@ module Dirless
             return context.put_status(409).json({"error" => "email already registered", "fields" => {"email" => "An account with this email already exists"}}).halt
           end
 
-          # Generate customer name: 12 random lowercase letters + "-" + (max port + 1, starting at 5000)
-          random_part = Array.new(12) { ALPHA.sample }.join
-          max_port = Customer.all.map { |c| c.port }.select { |p| p >= 5000 }.max?
-          next_port = max_port ? max_port + 1 : 5000
-          customer_name = "#{random_part}-#{next_port}"
+          # Wrap all writes in a transaction so customer + account + job
+          # are created atomically (no partial state on failure).
+          db = Granite::Connections["sqlite"].not_nil![:writer].database
+          db.exec("BEGIN IMMEDIATE")
 
-          hmac_secret = Random::Secure.hex(32)
+          begin
+            # Atomic port allocation: SELECT MAX inside the transaction
+            # prevents two concurrent registrations from getting the same port.
+            # BEGIN IMMEDIATE acquires a write lock immediately.
+            random_part = Array.new(12) { ALPHA.sample }.join
+            max_port_result = db.scalar("SELECT MAX(CAST(SUBSTR(name, INSTR(name, '-') + 1) AS INTEGER)) FROM customers WHERE CAST(SUBSTR(name, INSTR(name, '-') + 1) AS INTEGER) >= 5000")
+            next_port = max_port_result.is_a?(Int64) ? max_port_result.to_i + 1 : 5000
+            customer_name = "#{random_part}-#{next_port}"
 
-          customer = Customer.new(
-            name: customer_name,
-            hmac_secret: hmac_secret,
-            label: company,
-          )
+            hmac_secret = Random::Secure.hex(32)
 
-          unless customer.save
-            return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
+            customer = Customer.new(
+              name: customer_name,
+              hmac_secret: hmac_secret,
+              label: company,
+            )
+
+            unless customer.save
+              db.exec("ROLLBACK")
+              return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
+            end
+
+            account = CustomerAccount.new(
+              email: email,
+              password_hash: CustomerAccount.hash_password(password),
+              customer_name: customer_name,
+              company: company,
+              provisioned: false,
+            )
+
+            unless account.save
+              db.exec("ROLLBACK")
+              return context.put_status(422).json({"error" => account.errors.map(&.message).join(", ")}).halt
+            end
+
+            # Queue a provision job for the deployer to pick up
+            job = ProvisionJob.new(customer_name: customer_name, status: "pending")
+            job.save
+
+            db.exec("COMMIT")
+          rescue ex
+            db.exec("ROLLBACK") rescue nil
+            raise ex
           end
-
-          account = CustomerAccount.new(
-            email: email,
-            password_hash: CustomerAccount.hash_password(password),
-            customer_name: customer_name,
-            company: company,
-            provisioned: false,
-          )
-
-          unless account.save
-            customer.destroy
-            return context.put_status(422).json({"error" => account.errors.map(&.message).join(", ")}).halt
-          end
-
-          # Queue a provision job for the deployer to pick up
-          job = ProvisionJob.new(customer_name: customer_name, status: "pending")
-          job.save
 
           context.put_status(201).json(account.to_response).halt
         end
