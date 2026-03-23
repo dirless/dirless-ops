@@ -55,6 +55,12 @@ module Dirless
           delete("/v1/nodes/#{name}")
         end
 
+        def provision_jobs(status : String? = nil) : Array(ProvisionJobResponse)
+          path = "/v1/provision-jobs"
+          path += "?status=#{status}" if status
+          Array(ProvisionJobResponse).from_json(get(path))
+        end
+
         def status : Array(CustomerStatusResponse)
           Array(CustomerStatusResponse).from_json(get("/v1/status"))
         end

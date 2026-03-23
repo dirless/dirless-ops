@@ -19,6 +19,7 @@ abstract class MainLayout
             a "Status", href: "/", class: "text-gray-300 hover:text-white text-sm"
             a "Customers", href: "/customers", class: "text-gray-300 hover:text-white text-sm"
             a "Nodes", href: "/nodes", class: "text-gray-300 hover:text-white text-sm"
+            a "Deployments", href: "/provision-jobs", class: "text-gray-300 hover:text-white text-sm"
             div class: "ml-auto" do
               form action: "/logout", method: "post" do
                 input type: "hidden", name: "_method", value: "DELETE"

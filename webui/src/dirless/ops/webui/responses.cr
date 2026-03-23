@@ -57,6 +57,18 @@ module Dirless
         property nodes : Array(NodeStatusResponse)
       end
 
+      struct ProvisionJobResponse
+        include JSON::Serializable
+
+        property id : Int32
+        property customer_name : String
+        property status : String
+        property error : String?
+        property created_at : String?
+        property started_at : String?
+        property completed_at : String?
+      end
+
       struct PortalAccountResponse
         include JSON::Serializable
 
