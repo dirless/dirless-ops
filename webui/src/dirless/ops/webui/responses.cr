@@ -43,6 +43,8 @@ module Dirless
         property response_time_ms : Int32?
         property tenant_count : Int32?
         property user_count : Int32?
+        property data_updated_at : String?
+        property replication_lag_seconds : Int32?
         property error : String?
         property checked_at : String?
       end

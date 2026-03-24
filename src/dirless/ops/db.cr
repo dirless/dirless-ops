@@ -75,6 +75,8 @@ module Dirless
       SQL
       "CREATE INDEX IF NOT EXISTS idx_provision_jobs_status ON provision_jobs (status)",
       "CREATE INDEX IF NOT EXISTS idx_provision_jobs_customer ON provision_jobs (customer_name)",
+      # Migration: replication lag tracking
+      "ALTER TABLE health_checks ADD COLUMN data_updated_at DATETIME",
     ]
 
     def self.setup_db(database_path : String)

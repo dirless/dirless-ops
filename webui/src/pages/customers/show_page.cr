@@ -53,6 +53,7 @@ class Customers::ShowPage < MainLayout
               th "Status", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Enrolled Nodes", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Users", class: "px-6 py-3 text-left font-medium text-gray-500"
+              th "Replication Lag", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Latency", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Last Checked", class: "px-6 py-3 text-left font-medium text-gray-500"
             end
@@ -78,6 +79,9 @@ class Customers::ShowPage < MainLayout
                   end
                 end
                 td node.user_count.try(&.to_s) || "-", class: "px-6 py-3 text-gray-600"
+                td class: "px-6 py-3" do
+                  lag_badge(node)
+                end
                 td node.response_time_ms.try { |ms| "#{ms}ms" } || "-", class: "px-6 py-3 text-gray-500"
                 td node.checked_at || "never", class: "px-6 py-3 text-gray-400 text-xs"
               end
@@ -149,17 +153,45 @@ class Customers::ShowPage < MainLayout
     up_nodes = nodes.select { |n| n.status == "up" }
     return if up_nodes.size < 2
 
-    enrolled_counts = up_nodes.map(&.tenant_count).compact.uniq
-    user_counts     = up_nodes.map(&.user_count).compact.uniq
+    max_lag = up_nodes.compact_map(&.replication_lag_seconds).max?
 
-    return if enrolled_counts.size == 0 && user_counts.size == 0
-
-    in_sync = enrolled_counts.size <= 1 && user_counts.size <= 1
-
-    if in_sync
-      span "In sync", class: "text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700"
+    if max_lag
+      if max_lag <= 120
+        span "In sync", class: "text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700"
+      else
+        span "Lag: #{format_lag(max_lag)}", class: "text-xs font-medium px-2 py-0.5 rounded bg-red-100 text-red-700"
+      end
     else
-      span "Out of sync", class: "text-xs font-medium px-2 py-0.5 rounded bg-red-100 text-red-700"
+      enrolled_counts = up_nodes.map(&.tenant_count).compact.uniq
+      user_counts     = up_nodes.map(&.user_count).compact.uniq
+      return if enrolled_counts.size == 0 && user_counts.size == 0
+      in_sync = enrolled_counts.size <= 1 && user_counts.size <= 1
+      if in_sync
+        span "In sync", class: "text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700"
+      else
+        span "Out of sync", class: "text-xs font-medium px-2 py-0.5 rounded bg-red-100 text-red-700"
+      end
+    end
+  end
+
+  private def lag_badge(node : Dirless::Ops::WebUI::NodeStatusResponse)
+    if node.is_primary
+      span "primary", class: "text-xs text-gray-400"
+    elsif (lag = node.replication_lag_seconds)
+      css = lag <= 120 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+      span format_lag(lag), class: "px-2 py-0.5 rounded text-xs font-medium #{css}"
+    else
+      span "-", class: "text-gray-400"
+    end
+  end
+
+  private def format_lag(seconds : Int32) : String
+    if seconds < 60
+      "#{seconds}s"
+    elsif seconds < 3600
+      "#{seconds // 60}m #{seconds % 60}s"
+    else
+      "#{seconds // 3600}h #{(seconds % 3600) // 60}m"
     end
   end
 

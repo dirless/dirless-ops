@@ -16,6 +16,7 @@ module Dirless
       column tenant_count : Int32?
       column user_count : Int32?
       column error : String?
+      column data_updated_at : Time?
       column checked_at : Time
 
       def to_response

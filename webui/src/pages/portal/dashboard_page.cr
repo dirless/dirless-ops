@@ -79,6 +79,7 @@ class Portal::DashboardPage < PortalLayout
       total_users   = 0
       last_checked  = ""
       ok_nodes      = 0
+      max_lag       = nil.as(Int32?)
 
       if cs = @customer_status
         cs.nodes.each do |n|
@@ -87,6 +88,9 @@ class Portal::DashboardPage < PortalLayout
           ok_nodes      += 1 if n.status == "ok"
           if last_checked.empty? && n.checked_at
             last_checked = n.checked_at.not_nil!
+          end
+          if (lag = n.replication_lag_seconds)
+            max_lag = lag if max_lag.nil? || lag > max_lag.not_nil!
           end
         end
       end
@@ -108,6 +112,21 @@ class Portal::DashboardPage < PortalLayout
           end
           div class: "stat-label" do
             text "Synced users"
+          end
+        end
+        div class: "stat-card" do
+          if ml = max_lag
+            lag_class = ml <= 120 ? "stat-value" : "stat-value stat-value-warn"
+            div class: lag_class do
+              text format_lag(ml)
+            end
+          else
+            div class: "stat-value stat-value-pending" do
+              text "N/A"
+            end
+          end
+          div class: "stat-label" do
+            text "Replication lag"
           end
         end
         div class: "stat-card" do
@@ -187,6 +206,7 @@ HTML
                   th "Status"
                   th "Tenants"
                   th "Users"
+                  th "Replication Lag"
                   th "Response"
                   th "Checked"
                 end
@@ -208,6 +228,16 @@ HTML
                     td(node.tenant_count.try(&.to_s) || "—")
                     td(node.user_count.try(&.to_s) || "—")
                     td do
+                      if node.is_primary
+                        span "primary", class: "badge badge-muted"
+                      elsif (lag = node.replication_lag_seconds)
+                        lag_class = lag <= 120 ? "badge badge-ok" : "badge badge-error"
+                        span format_lag(lag), class: lag_class
+                      else
+                        text "—"
+                      end
+                    end
+                    td do
                       if rt = node.response_time_ms
                         text "#{rt}ms"
                       else
@@ -222,6 +252,16 @@ HTML
           end
         end
       end
+    end
+  end
+
+  private def format_lag(seconds : Int32) : String
+    if seconds < 60
+      "#{seconds}s"
+    elsif seconds < 3600
+      "#{seconds // 60}m #{seconds % 60}s"
+    else
+      "#{seconds // 3600}h #{(seconds % 3600) // 60}m"
     end
   end
 
@@ -272,6 +312,10 @@ HTML
       font-weight: 600;
       color: var(--muted);
       padding-top: 0.4rem;
+    }
+
+    .stat-value-warn {
+      color: #f85149;
     }
 
     .stat-label {
@@ -463,6 +507,12 @@ HTML
       background: rgba(248, 81, 73, 0.15);
       color: #ff7b72;
       border: 1px solid rgba(248, 81, 73, 0.3);
+    }
+
+    .badge-muted {
+      background: rgba(139, 148, 158, 0.12);
+      color: var(--muted);
+      border: 1px solid rgba(139, 148, 158, 0.25);
     }
 
     .badge-primary {

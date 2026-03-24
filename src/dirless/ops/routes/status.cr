@@ -14,25 +14,45 @@ module Dirless
           customers = Customer.all
 
           result = customers.map do |customer|
-            node_statuses = nodes.map do |node|
-              latest = HealthCheck.first(
+            # First pass: collect latest health check per node
+            checks = nodes.map do |node|
+              {node, HealthCheck.first(
                 "WHERE customer_id = ? AND node_id = ? ORDER BY checked_at DESC",
                 [customer.id, node.id]
-              )
+              )}
+            end
+
+            # Find the primary node's data_updated_at for lag calculation
+            primary_updated_at = checks
+              .select { |n, _| n.is_primary }
+              .first?.try { |_, hc| hc.try(&.data_updated_at) }
+
+            node_statuses = checks.map do |node, latest|
+              node_updated_at = latest.try(&.data_updated_at)
+
+              # Lag = how far behind this node is vs the primary
+              lag_seconds = if primary_updated_at && node_updated_at
+                              lag = (primary_updated_at - node_updated_at).total_seconds.to_i
+                              lag < 0 ? 0 : lag
+                            else
+                              nil
+                            end
 
               {
-                "node_id"          => node.id,
-                "node_name"        => node.name,
-                "node_ip"          => node.ip,
-                "region"           => node.region,
-                "is_primary"       => node.is_primary,
-                "status"           => latest.try(&.status) || "unknown",
-                "http_status"      => latest.try(&.http_status),
-                "response_time_ms" => latest.try(&.response_time_ms),
-                "tenant_count"     => latest.try(&.tenant_count),
-                "user_count"       => latest.try(&.user_count),
-                "error"            => latest.try(&.error),
-                "checked_at"       => latest.try(&.checked_at.try(&.to_rfc3339)),
+                "node_id"                => node.id,
+                "node_name"              => node.name,
+                "node_ip"                => node.ip,
+                "region"                 => node.region,
+                "is_primary"             => node.is_primary,
+                "status"                 => latest.try(&.status) || "unknown",
+                "http_status"            => latest.try(&.http_status),
+                "response_time_ms"       => latest.try(&.response_time_ms),
+                "tenant_count"           => latest.try(&.tenant_count),
+                "user_count"             => latest.try(&.user_count),
+                "data_updated_at"        => node_updated_at.try(&.to_rfc3339),
+                "replication_lag_seconds" => lag_seconds,
+                "error"                  => latest.try(&.error),
+                "checked_at"             => latest.try(&.checked_at.try(&.to_rfc3339)),
               }
             end
 
