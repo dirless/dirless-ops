@@ -12,6 +12,10 @@ shards:
     git: https://github.com/crystal-lang/crystal-db.git
     version: 0.13.1
 
+  dirless-http:
+    git: https://github.com/dirless/dirless-http.git
+    version: 0.1.0+git.commit.0467b92e8c2e89cf4ac916f6676140282fd9bc58
+
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
     version: 0.5.0

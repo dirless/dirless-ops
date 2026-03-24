@@ -1,32 +1,13 @@
 require "http/client"
 require "json"
 require "openssl"
+require "dirless-http"
 require "./models/customer"
 require "./models/node"
 require "./models/health_check"
 
 module Dirless
   module Ops
-    # HTTP::Client subclass that connects to a specific IP address while using
-    # the original hostname for TLS SNI and certificate verification.
-    private class TargetedClient < HTTP::Client
-      def initialize(@target_ip : String, sni_host : String, port : Int32, tls : OpenSSL::SSL::Context::Client)
-        super(sni_host, port, tls: tls)
-      end
-
-      private def connect : IO
-        socket = TCPSocket.new(@target_ip, @port, connect_timeout: @connect_timeout)
-        socket.read_timeout = @read_timeout if @read_timeout
-        socket.write_timeout = @write_timeout if @write_timeout
-        OpenSSL::SSL::Socket::Client.new(
-          socket,
-          context: @tls.as(OpenSSL::SSL::Context::Client),
-          sync_close: true,
-          hostname: @host,
-        )
-      end
-    end
-
     class Poller
       RETENTION_HOURS = 24
 
@@ -114,7 +95,7 @@ module Dirless
       # response parsing (chunked encoding, content-length, etc.).
       private def https_get(ip : String, port : Int32, hostname : String, path : String) : {Int32, String}
         tls = OpenSSL::SSL::Context::Client.new
-        client = TargetedClient.new(ip, hostname, port, tls)
+        client = Dirless::Net::TargetedClient.new(ip, hostname, port, tls)
         client.connect_timeout = 10.seconds
         client.read_timeout = 10.seconds
         begin
