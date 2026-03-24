@@ -15,6 +15,15 @@ require "./dirless/ops/models/node"
 require "./dirless/ops/models/health_check"
 require "./dirless/ops/models/customer_account"
 require "./dirless/ops/models/provision_job"
+require "./dirless/ops/deployer"
+
+# In --deploy mode, run the deployer and exit (used by systemd timer).
+if ARGV.includes?("--deploy")
+  runner = Dirless::Ops::Deployer::Runner.new(_config)
+  runner.run
+  exit 0
+end
+
 require "./dirless/ops/middleware/api_key"
 require "./dirless/ops/poller"
 require "./dirless/ops/routes/health"
