@@ -17,6 +17,8 @@ module Dirless
       column user_count : Int32?
       column error : String?
       column data_updated_at : Time?
+      column active_agents : Int32?
+      column agents_json : String?
       column checked_at : Time
 
       def to_response

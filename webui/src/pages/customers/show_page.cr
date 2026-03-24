@@ -53,6 +53,7 @@ class Customers::ShowPage < MainLayout
               th "Status", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Enrolled Nodes", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Users", class: "px-6 py-3 text-left font-medium text-gray-500"
+              th "Active Agents", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Replication Lag", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Latency", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Last Checked", class: "px-6 py-3 text-left font-medium text-gray-500"
@@ -80,10 +81,43 @@ class Customers::ShowPage < MainLayout
                 end
                 td node.user_count.try(&.to_s) || "-", class: "px-6 py-3 text-gray-600"
                 td class: "px-6 py-3" do
+                  agents_badge(node)
+                end
+                td class: "px-6 py-3" do
                   lag_badge(node)
                 end
                 td node.response_time_ms.try { |ms| "#{ms}ms" } || "-", class: "px-6 py-3 text-gray-500"
                 td node.checked_at || "never", class: "px-6 py-3 text-gray-400 text-xs"
+              end
+            end
+          end
+        end
+      end
+    end
+
+    # Agents detail: collect all agents from the primary node's data
+    primary_agents = node_statuses
+      .select(&.is_primary)
+      .first?
+      .try(&.agents)
+
+    if primary_agents && !primary_agents.empty?
+      h2 "Connected Agents", class: "text-lg font-semibold text-gray-900 mt-8 mb-3"
+      div class: "bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" do
+        table class: "w-full text-sm" do
+          thead do
+            tr class: "bg-gray-50" do
+              th "Agent ID", class: "px-6 py-3 text-left font-medium text-gray-500"
+              th "Hostname", class: "px-6 py-3 text-left font-medium text-gray-500"
+              th "Last Seen", class: "px-6 py-3 text-left font-medium text-gray-500"
+            end
+          end
+          tbody do
+            primary_agents.each do |agent|
+              tr class: "border-t border-gray-100" do
+                td agent.agent_id || "-", class: "px-6 py-3 font-mono text-sm"
+                td agent.hostname || "-", class: "px-6 py-3 text-gray-600"
+                td agent.last_seen_at || "-", class: "px-6 py-3 text-gray-400 text-xs"
               end
             end
           end
@@ -146,6 +180,15 @@ class Customers::ShowPage < MainLayout
           end
         end
       end
+    end
+  end
+
+  private def agents_badge(node : Dirless::Ops::WebUI::NodeStatusResponse)
+    if (count = node.active_agents)
+      css = count > 0 ? "text-gray-900 font-medium" : "text-gray-400"
+      span count.to_s, class: css
+    else
+      span "-", class: "text-gray-400"
     end
   end
 

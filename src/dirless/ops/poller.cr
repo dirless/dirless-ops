@@ -56,11 +56,15 @@ module Dirless
           tenant_count = nil
           user_count = nil
           data_updated_at = nil
+          active_agents = nil
+          agents_json = nil
           if status_code == 200
             parsed = JSON.parse(body)
             tenant_count = parsed["tenants"]?.try(&.as_i?)
             user_count = parsed["users"]?.try(&.as_i?)
             data_updated_at = parsed["data_updated_at"]?.try(&.as_s?).try { |s| Time.parse_rfc3339(s) rescue nil }
+            active_agents = parsed["active_agents"]?.try(&.as_i?)
+            agents_json = parsed["agents"]?.try(&.to_json)
           end
 
           hc = HealthCheck.new(
@@ -72,6 +76,8 @@ module Dirless
             tenant_count: tenant_count,
             user_count: user_count,
             data_updated_at: data_updated_at,
+            active_agents: active_agents,
+            agents_json: agents_json,
             error: nil,
             checked_at: checked_at,
           )

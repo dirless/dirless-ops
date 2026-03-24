@@ -75,17 +75,19 @@ class Portal::DashboardPage < PortalLayout
       # Provisioned state
 
       # Compute aggregate stats from node statuses
-      total_tenants = 0
-      total_users   = 0
-      last_checked  = ""
-      ok_nodes      = 0
-      max_lag       = nil.as(Int32?)
+      total_tenants  = 0
+      total_users    = 0
+      total_agents   = 0
+      last_checked   = ""
+      ok_nodes       = 0
+      max_lag        = nil.as(Int32?)
 
       if cs = @customer_status
         cs.nodes.each do |n|
-          total_tenants += n.tenant_count || 0
-          total_users   += n.user_count   || 0
-          ok_nodes      += 1 if n.status == "ok"
+          total_tenants  += n.tenant_count || 0
+          total_users    += n.user_count   || 0
+          total_agents   += n.active_agents || 0
+          ok_nodes       += 1 if n.status == "ok"
           if last_checked.empty? && n.checked_at
             last_checked = n.checked_at.not_nil!
           end
@@ -112,6 +114,15 @@ class Portal::DashboardPage < PortalLayout
           end
           div class: "stat-label" do
             text "Synced users"
+          end
+        end
+        div class: "stat-card" do
+          agent_css = total_agents > 0 ? "stat-value" : "stat-value stat-value-pending"
+          div class: agent_css do
+            text total_agents > 0 ? total_agents.to_s : "0"
+          end
+          div class: "stat-label" do
+            text "Active agents"
           end
         end
         div class: "stat-card" do
@@ -206,6 +217,7 @@ HTML
                   th "Status"
                   th "Tenants"
                   th "Users"
+                  th "Agents"
                   th "Replication Lag"
                   th "Response"
                   th "Checked"
@@ -227,6 +239,7 @@ HTML
                     end
                     td(node.tenant_count.try(&.to_s) || "—")
                     td(node.user_count.try(&.to_s) || "—")
+                    td(node.active_agents.try(&.to_s) || "—")
                     td do
                       if node.is_primary
                         span "primary", class: "badge badge-muted"

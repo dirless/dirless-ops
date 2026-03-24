@@ -38,6 +38,21 @@ module Dirless
                               nil
                             end
 
+              # Parse agents JSON array stored by the poller
+              agents = begin
+                if (json_str = latest.try(&.agents_json))
+                  JSON.parse(json_str).as_a.map do |a|
+                    {
+                      "agent_id"     => a["agent_id"]?.try(&.as_s),
+                      "hostname"     => a["hostname"]?.try(&.as_s),
+                      "last_seen_at" => a["last_seen_at"]?.try(&.as_s),
+                    }
+                  end
+                end
+              rescue
+                nil
+              end
+
               {
                 "node_id"                => node.id,
                 "node_name"              => node.name,
@@ -51,6 +66,8 @@ module Dirless
                 "user_count"             => latest.try(&.user_count),
                 "data_updated_at"        => node_updated_at.try(&.to_rfc3339),
                 "replication_lag_seconds" => lag_seconds,
+                "active_agents"          => latest.try(&.active_agents),
+                "agents"                 => agents,
                 "error"                  => latest.try(&.error),
                 "checked_at"             => latest.try(&.checked_at.try(&.to_rfc3339)),
               }

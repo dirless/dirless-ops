@@ -30,6 +30,14 @@ module Dirless
         property updated_at : String?
       end
 
+      struct AgentInfo
+        include JSON::Serializable
+
+        property agent_id : String?
+        property hostname : String?
+        property last_seen_at : String?
+      end
+
       struct NodeStatusResponse
         include JSON::Serializable
 
@@ -45,6 +53,8 @@ module Dirless
         property user_count : Int32?
         property data_updated_at : String?
         property replication_lag_seconds : Int32?
+        property active_agents : Int32?
+        property agents : Array(AgentInfo)?
         property error : String?
         property checked_at : String?
       end

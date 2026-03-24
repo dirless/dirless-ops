@@ -37,6 +37,7 @@ class Home::IndexPage < MainLayout
                 th "Status", class: "px-6 py-3 text-left font-medium text-gray-500"
                 th "Enrolled Nodes", class: "px-6 py-3 text-left font-medium text-gray-500"
                 th "Users", class: "px-6 py-3 text-left font-medium text-gray-500"
+                th "Active Agents", class: "px-6 py-3 text-left font-medium text-gray-500"
                 th "Replication Lag", class: "px-6 py-3 text-left font-medium text-gray-500"
                 th "Checked At", class: "px-6 py-3 text-left font-medium text-gray-500"
               end
@@ -56,6 +57,9 @@ class Home::IndexPage < MainLayout
                   end
                   td node.tenant_count.try(&.to_s) || "-", class: "px-6 py-3 text-gray-600"
                   td node.user_count.try(&.to_s) || "-", class: "px-6 py-3 text-gray-600"
+                  td class: "px-6 py-3" do
+                    agents_badge(node)
+                  end
                   td class: "px-6 py-3" do
                     lag_badge(node)
                   end
@@ -92,6 +96,15 @@ class Home::IndexPage < MainLayout
       else
         span "Out of sync", class: "text-xs font-medium px-2 py-0.5 rounded bg-red-100 text-red-700"
       end
+    end
+  end
+
+  private def agents_badge(node : Dirless::Ops::WebUI::NodeStatusResponse)
+    if (count = node.active_agents)
+      css = count > 0 ? "text-gray-900 font-medium" : "text-gray-400"
+      span count.to_s, class: css
+    else
+      span "-", class: "text-gray-400"
     end
   end
 
