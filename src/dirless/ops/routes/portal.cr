@@ -26,7 +26,7 @@ module Dirless
 
           errors = {} of String => String
           errors["email"] = "Required" if email.empty?
-          errors["email"] = "Invalid email" unless email.includes?("@") && email.includes?(".")
+          errors["email"] = "Invalid email" unless email.empty? || email.matches?(/\A[^@\s]+@[^@\s]+\.[^@\s]+\z/)
           errors["password"] = "Required" if password.empty?
           errors["password"] = "Must be at least 12 characters" if !password.empty? && password.size < 12
           errors["company"] = "Required" if company.empty?
@@ -96,6 +96,10 @@ module Dirless
       class PortalLogin
         include Grip::Controllers::HTTP
 
+        # Pre-computed dummy hash so that login attempts for non-existent emails
+        # still spend time in bcrypt, preventing timing-based email enumeration.
+        DUMMY_HASH = Crypto::Bcrypt::Password.create("dummy-timing-equalizer", cost: 12).to_s
+
         def post(context : Context) : Context
           body = context.request.body.try(&.gets_to_end) || ""
           begin
@@ -109,11 +113,20 @@ module Dirless
 
           account = CustomerAccount.find_by(email: email)
 
-          unless account && account.verify_password(password)
+          if account
+            valid = account.verify_password(password)
+          else
+            # Burn the same amount of CPU time as a real verify to prevent
+            # attackers from distinguishing "email not found" by response timing.
+            Crypto::Bcrypt::Password.new(DUMMY_HASH).verify(password)
+            valid = false
+          end
+
+          unless valid
             return context.put_status(401).json({"error" => "Invalid email or password"}).halt
           end
 
-          context.put_status(200).json(account.to_response).halt
+          context.put_status(200).json(account.not_nil!.to_response).halt
         end
       end
     end

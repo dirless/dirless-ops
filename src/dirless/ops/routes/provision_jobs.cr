@@ -33,6 +33,8 @@ module Dirless
         end
       end
 
+      VALID_JOB_STATUSES = {"pending", "in_progress", "completed", "failed"}
+
       class UpdateProvisionJob
         include Grip::Controllers::HTTP
 
@@ -51,6 +53,9 @@ module Dirless
           end
 
           if s = parsed["status"]?.try(&.as_s)
+            unless VALID_JOB_STATUSES.includes?(s)
+              return context.put_status(422).json({"error" => "invalid status '#{s}', must be one of: #{VALID_JOB_STATUSES.join(", ")}"}).halt
+            end
             job.status = s
             case s
             when "in_progress"

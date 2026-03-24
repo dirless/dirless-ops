@@ -7,6 +7,26 @@ require "./models/health_check"
 
 module Dirless
   module Ops
+    # HTTP::Client subclass that connects to a specific IP address while using
+    # the original hostname for TLS SNI and certificate verification.
+    private class TargetedClient < HTTP::Client
+      def initialize(@target_ip : String, sni_host : String, port : Int32, tls : OpenSSL::SSL::Context::Client)
+        super(sni_host, port, tls: tls)
+      end
+
+      private def connect : IO
+        socket = TCPSocket.new(@target_ip, @port, connect_timeout: @connect_timeout)
+        socket.read_timeout = @read_timeout if @read_timeout
+        socket.write_timeout = @write_timeout if @write_timeout
+        OpenSSL::SSL::Socket::Client.new(
+          socket,
+          context: @tls.as(OpenSSL::SSL::Context::Client),
+          sync_close: true,
+          hostname: @host,
+        )
+      end
+    end
+
     class Poller
       RETENTION_HOURS = 24
 
@@ -49,7 +69,7 @@ module Dirless
         start_time = Time.instant
 
         begin
-          status_code, body = https_get_to_ip(node.ip, 443, hostname, "/v1/health")
+          status_code, body = https_get(node.ip, 443, hostname, "/v1/health")
           elapsed_ms = ((Time.instant - start_time).total_milliseconds).to_i
 
           tenant_count = nil
@@ -88,26 +108,21 @@ module Dirless
         end
       end
 
-      # Connect to a specific IP but present the given hostname for SNI and the Host header.
-      # Crystal's HTTP::Client uses the connection host as SNI, so we do the TLS handshake
-      # manually to send the correct SNI while targeting a specific IP.
-      private def https_get_to_ip(ip : String, port : Int32, hostname : String, path : String) : {Int32, String}
-        tcp = TCPSocket.new(ip, port, connect_timeout: 10.seconds)
-        ctx = OpenSSL::SSL::Context::Client.new
-        ctx.verify_mode = OpenSSL::SSL::VerifyMode::NONE
-        ssl = OpenSSL::SSL::Socket::Client.new(tcp, context: ctx, hostname: hostname, sync_close: true)
-
-        ssl << "GET #{path} HTTP/1.1\r\nHost: #{hostname}\r\nConnection: close\r\n\r\n"
-        ssl.flush
-
-        raw = ssl.gets_to_end
-        ssl.close
-
-        lines = raw.split("\r\n")
-        status_code = lines.first?.try { |l| l.split(" ")[1]?.try(&.to_i?) } || 0
-        body = raw.split("\r\n\r\n", 2)[1]? || ""
-
-        {status_code, body}
+      # Uses TargetedClient to connect to a specific IP while presenting the
+      # correct SNI hostname for TLS verification. Unlike the old raw-socket
+      # approach, this properly verifies server certificates and handles HTTP
+      # response parsing (chunked encoding, content-length, etc.).
+      private def https_get(ip : String, port : Int32, hostname : String, path : String) : {Int32, String}
+        tls = OpenSSL::SSL::Context::Client.new
+        client = TargetedClient.new(ip, hostname, port, tls)
+        client.connect_timeout = 10.seconds
+        client.read_timeout = 10.seconds
+        begin
+          response = client.get(path)
+          {response.status_code, response.body}
+        ensure
+          client.close rescue nil
+        end
       end
 
       private def prune

@@ -89,8 +89,12 @@ module Dirless
       SCHEMA_STATEMENTS.each do |sql|
         db.exec(sql)
       rescue ex : Exception
-        # Ignore errors from idempotent migration statements (e.g. duplicate ADD COLUMN)
-        Log.debug { "schema statement skipped: #{ex.message}" }
+        msg = ex.message || ""
+        if msg.includes?("duplicate column") || msg.includes?("already exists")
+          Log.debug { "schema statement skipped (idempotent): #{msg}" }
+        else
+          Log.warn { "schema migration failed: #{msg} — SQL: #{sql.strip[0, 80]}" }
+        end
       end
     end
   end
