@@ -1,4 +1,5 @@
 require "json"
+require "crypto/subtle"
 
 module Dirless
   module Ops
@@ -16,7 +17,7 @@ module Dirless
         auth = context.request.headers["Authorization"]?
         token = auth.try { |h| h.starts_with?("Bearer ") ? h[7..] : nil }
 
-        unless token == @api_key
+        unless token && Crypto::Subtle.constant_time_compare(token, @api_key)
           context.response.status_code = 401
           context.response.content_type = "application/json"
           context.response.print({"error" => "unauthorized"}.to_json)

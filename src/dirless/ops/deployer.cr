@@ -29,8 +29,7 @@ module Dirless
             return
           end
 
-          customer_json = {customers: [{name: customer.name, hmac_secret: customer.hmac_secret}]}.to_json
-          success, output = run_ansible(customer_json)
+          success, output = run_ansible(customer.name, customer.hmac_secret)
 
           if success
             dns_ok, dns_output = update_dns
@@ -68,24 +67,31 @@ module Dirless
 
         ANSIBLE_TIMEOUT = 10.minutes
 
-        def run_ansible(customer_json : String) : {Bool, String}
+        def run_ansible(customer_name : String, hmac_secret : String) : {Bool, String}
+          # Pass customer data via stdin (@/dev/stdin) instead of CLI args
+          # to avoid exposing secrets in /proc/*/cmdline and logs.
+          customer_json = {customers: [{name: customer_name, hmac_secret: hmac_secret}]}.to_json
+
           args = [
             "-i", @ansible_inventory,
             @ansible_playbook,
-            "-e", customer_json,
+            "-e", "@/dev/stdin",
             "--diff",
           ]
 
-          Log.info { "Running: ansible-playbook #{args.join(" ")}" }
+          Log.info { "Running: ansible-playbook for customer #{customer_name}" }
 
           output = IO::Memory.new
           timed_out = false
           process = Process.new(
             "ansible-playbook",
             args: args,
+            input: Process::Redirect::Pipe,
             output: output,
             error: output,
           )
+          process.input.print(customer_json)
+          process.input.close
 
           spawn do
             sleep ANSIBLE_TIMEOUT
