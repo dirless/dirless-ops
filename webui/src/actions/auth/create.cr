@@ -2,7 +2,7 @@ class Auth::Create < Lucky::Action
   default_format :html
   accepted_formats [:html]
 
-  post "/admin/login" do
+  post "/admin-login" do
     username = params.get?(:username).to_s.strip
     password = params.get?(:password).to_s
 

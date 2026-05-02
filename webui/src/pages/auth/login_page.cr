@@ -22,7 +22,7 @@ class LoginPage
             end
           end
 
-          form action: "/admin/login", method: "post" do
+          form action: "/admin-login", method: "post" do
             div class: "mb-4" do
               label "Username", for: "username",
                 class: "block text-sm font-medium text-gray-700 mb-1"
