@@ -1,5 +1,5 @@
 class Portal::Dashboard < PortalAction
-  get "/portal/dashboard" do
+  get "/dashboard" do
     customer_info = begin
       daemon.customer(portal_customer_name)
     rescue

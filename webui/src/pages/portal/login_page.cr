@@ -29,7 +29,7 @@ class Portal::LoginPage
               end
             end
 
-            form action: "/portal/login", method: "post" do
+            form action: "/login", method: "post" do
               div class: "form-group" do
                 label "Email", for: "email", class: "form-label"
                 input type: "email", id: "email", name: "email",
@@ -49,7 +49,7 @@ class Portal::LoginPage
 
             div class: "auth-footer" do
               text "Don't have an account? "
-              a "Register", href: "/portal/register"
+              a "Register", href: "/register"
             end
           end
         end

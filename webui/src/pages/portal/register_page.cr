@@ -30,7 +30,7 @@ class Portal::RegisterPage
               end
             end
 
-            form action: "/portal/register", method: "post" do
+            form action: "/register", method: "post" do
               div class: "form-group" do
                 label "Company name", for: "company", class: "form-label"
                 input type: "text", id: "company", name: "company",
@@ -84,7 +84,7 @@ class Portal::RegisterPage
 
             div class: "auth-footer" do
               text "Already have an account? "
-              a "Sign in", href: "/portal/login"
+              a "Sign in", href: "/login"
             end
           end
         end

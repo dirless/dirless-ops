@@ -1,7 +1,7 @@
 class Portal::Login < Lucky::Action
   accepted_formats [:html]
 
-  get "/portal/login" do
+  get "/login" do
     html Portal::LoginPage, error: nil
   end
 end

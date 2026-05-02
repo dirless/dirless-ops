@@ -1,7 +1,7 @@
 class Portal::CreateAccount < Lucky::Action
   accepted_formats [:html]
 
-  post "/portal/register" do
+  post "/register" do
     email    = params.get?(:email).to_s.strip
     password = params.get?(:password).to_s
     confirm  = params.get?(:confirm_password).to_s

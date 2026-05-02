@@ -21,13 +21,13 @@ abstract class PortalLayout
           # Sidebar
           aside class: "sidebar" do
             div class: "sidebar-logo" do
-              a href: "/portal/dashboard" do
+              a href: "/dashboard" do
                 span "dir", class: "logo-main"
                 span "less", class: "logo-accent"
               end
             end
             nav class: "sidebar-nav" do
-              a "Dashboard", href: "/portal/dashboard", class: "nav-item nav-item-active"
+              a "Dashboard", href: "/dashboard", class: "nav-item nav-item-active"
             end
             div class: "sidebar-footer" do
               div class: "sidebar-user" do
@@ -38,7 +38,7 @@ abstract class PortalLayout
                   text email
                 end
               end
-              form action: "/portal/logout", method: "post" do
+              form action: "/logout", method: "post" do
                 button type: "submit", class: "signout-btn" do
                   text "Sign out"
                 end
