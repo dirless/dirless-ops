@@ -10,6 +10,7 @@ module Dirless
       getter polling_interval_seconds : Int32
       getter ansible_inventory : String?
       getter ansible_playbook : String?
+      getter mail_spool_dir : String
 
       def initialize(path : String)
         raw = File.read(path)
@@ -25,6 +26,9 @@ module Dirless
           @ansible_inventory = deployer["ansible_inventory"]?.try(&.as_s)
           @ansible_playbook = deployer["ansible_playbook"]?.try(&.as_s)
         end
+
+        @mail_spool_dir = toml["notifications"]?.try(&.["mail_spool_dir"]?.try(&.as_s)) ||
+                          "/var/spool/dirless-ops/outbox"
       end
 
       def self.load(path : String) : Config

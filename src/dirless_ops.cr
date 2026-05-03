@@ -1,6 +1,7 @@
 require "grip"
 require "./dirless/ops/config"
 require "./dirless/ops/db"
+require "./dirless/ops/notifier"
 
 # Load config and register Granite connection BEFORE requiring models.
 # Granite's `connection` macro validates the connection exists at class-load
@@ -17,9 +18,11 @@ require "./dirless/ops/models/customer_account"
 require "./dirless/ops/models/provision_job"
 require "./dirless/ops/deployer"
 
+_notifier = Dirless::Ops::Notifier.new(_config.mail_spool_dir)
+
 # In --deploy mode, run the deployer and exit (used by systemd timer).
 if ARGV.includes?("--deploy")
-  runner = Dirless::Ops::Deployer::Runner.new(_config)
+  runner = Dirless::Ops::Deployer::Runner.new(_config, _notifier)
   runner.run
   exit 0
 end
@@ -53,6 +56,7 @@ module Dirless
     end
 
     @@config : Config? = nil
+    @@notifier : Notifier? = nil
 
     def self.config : Config
       @@config || raise "Ops.config accessed before initialization"
@@ -60,6 +64,14 @@ module Dirless
 
     def self.config=(config : Config)
       @@config = config
+    end
+
+    def self.notifier : Notifier
+      @@notifier || raise "Ops.notifier accessed before initialization"
+    end
+
+    def self.notifier=(n : Notifier)
+      @@notifier = n
     end
 
     class Application
@@ -111,6 +123,7 @@ module Dirless
     end
 
     Ops.config = _config
+    Ops.notifier = _notifier
 
     Poller.new(_config.polling_interval_seconds).start
 

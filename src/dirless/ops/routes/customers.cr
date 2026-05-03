@@ -1,6 +1,7 @@
 require "grip"
 require "json"
 require "../models/customer"
+require "../models/customer_account"
 
 module Dirless
   module Ops
@@ -128,7 +129,11 @@ module Dirless
             return context.put_status(404).json({"error" => "customer not found"}).halt
           end
 
+          account = CustomerAccount.find_by(customer_name: name)
           customer.destroy
+          if account
+            Ops.notifier.account_deleted(account.email, account.company || name)
+          end
           context.put_status(204).halt
         end
       end

@@ -67,6 +67,35 @@ crystal build src/dirless_ops.cr
 
 Used by a systemd timer to drain the provision job queue.
 
+## Outgoing email (notification system — Crystal side pending)
+
+Transactional email is sent via a filesystem spool on the ops machine. To send an email from Crystal code, write an RFC 2822 `.eml` file atomically to `/var/spool/dirless-ops/outbox/`:
+
+```crystal
+# Write to a .tmp file first, then rename for atomicity
+tmp = "/var/spool/dirless-ops/outbox/#{Random::Secure.hex(8)}.eml.tmp"
+final = tmp.sub(".eml.tmp", ".eml")
+File.write(tmp, <<-EML)
+  From: Dirless <info@dirless.com>
+  To: #{email}
+  Subject: Welcome to Dirless
+
+  Hello, ...
+  EML
+File.rename(tmp, final)
+```
+
+A systemd timer (`dirless-flush-mail.timer`, every 1s) picks up `.eml` files and delivers them via msmtp. The `Notifier` class lives at `src/dirless/ops/notifier.cr` and is fully implemented.
+
+**Notifier methods:**
+- `welcome(email, company, customer_name)` — fired in `portal.cr` after registration commits
+- `environment_ready(email, company, customer_name)` — fired in `deployer.cr` after successful provision
+- `provisioning_failed(email, company)` — fired in `deployer.cr` on Ansible failure/timeout
+- `account_deleted(email, company)` — fired in `customers.cr` after admin deletes a customer
+
+**Config** (optional `[notifications]` section in `dirless-ops.toml`):
+- `mail_spool_dir` — defaults to `/var/spool/dirless-ops/outbox`
+
 ## Lucky session cookie gotcha
 
 Never put login routes under a nested path (e.g. `/admin/login`). Lucky does not set `Path=/` on session cookies, so the browser scopes the cookie to the URL's directory. Sessions break silently — the login POST succeeds but the next request sees an empty session.

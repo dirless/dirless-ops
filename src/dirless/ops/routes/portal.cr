@@ -84,6 +84,7 @@ module Dirless
             job.save
 
             db.exec("COMMIT")
+            Ops.notifier.welcome(email, company, customer_name)
           rescue ex
             db.exec("ROLLBACK") rescue nil
             raise ex

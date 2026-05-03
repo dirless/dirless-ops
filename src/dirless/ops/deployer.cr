@@ -9,7 +9,7 @@ module Dirless
         @ansible_inventory : String
         @ansible_playbook : String
 
-        def initialize(@config : Config)
+        def initialize(@config : Config, @notifier : Notifier)
           @ansible_inventory = @config.ansible_inventory || raise "deployer.ansible_inventory not set in config"
           @ansible_playbook = @config.ansible_playbook || raise "deployer.ansible_playbook not set in config"
         end
@@ -38,8 +38,10 @@ module Dirless
             end
             complete_job(job)
             mark_account_provisioned(job.customer_name)
+            notify_environment_ready(job.customer_name)
             Log.info { "Provision job ##{job.id} completed successfully" }
           else
+            notify_provisioning_failed(job.customer_name)
             fail_job(job, output)
             Log.error { "Provision job ##{job.id} failed: #{output}" }
           end
@@ -144,6 +146,18 @@ module Dirless
           {status.success?, result}
         rescue ex : Exception
           {false, ex.message || "unknown error"}
+        end
+
+        private def notify_environment_ready(customer_name : String)
+          account = CustomerAccount.find_by(customer_name: customer_name)
+          return unless account
+          @notifier.environment_ready(account.email, account.company || customer_name, customer_name)
+        end
+
+        private def notify_provisioning_failed(customer_name : String)
+          account = CustomerAccount.find_by(customer_name: customer_name)
+          return unless account
+          @notifier.provisioning_failed(account.email, account.company || customer_name)
         end
 
         def mark_account_provisioned(customer_name : String)
