@@ -26,6 +26,13 @@ module Dirless
         property region : String
         property provider : String
         property is_primary : Bool
+        property cpu_count : Int32?
+        property memory_gb : Int32?
+        property free_memory_mb : Int32?
+        property free_disk_gb : Int32?
+        property load_5m : Float64?
+        property last_probed_at : String?
+        property probe_error : String?
         property created_at : String?
         property updated_at : String?
       end

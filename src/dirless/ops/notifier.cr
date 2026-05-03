@@ -7,7 +7,7 @@ module Dirless
 
       FROM = "Dirless <info@dirless.com>"
 
-      def initialize(@spool_dir : String)
+      def initialize(@spool_dir : String, @ops_alert_email : String? = nil)
       end
 
       def welcome(email : String, company : String, customer_name : String)
@@ -64,6 +64,22 @@ module Dirless
         — The Dirless team
         BODY
         queue(email, "Your Dirless account has been deleted", body)
+      end
+
+      def node_down(node_name : String, node_ip : String, error : String)
+        to = @ops_alert_email
+        return unless to
+        body = <<-BODY
+        Node down alert.
+
+        Node:  #{node_name}
+        IP:    #{node_ip}
+        Error: #{error}
+        Time:  #{Time.utc.to_rfc3339}
+
+        — Dirless node prober
+        BODY
+        queue(to, "Node down: #{node_name}", body)
       end
 
       private def queue(to : String, subject : String, body : String)

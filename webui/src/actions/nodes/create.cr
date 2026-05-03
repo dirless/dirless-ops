@@ -6,6 +6,8 @@ class Nodes::Create < BrowserAction
     body["region"] = params.get(:region)
     body["provider"] = params.get?(:provider).try { |v| v.empty? ? "atlanticnet" : v } || "atlanticnet"
     body["is_primary"] = params.get?(:is_primary) == "true" ? "true" : "false"
+    params.get?(:cpu_count).try { |v| body["cpu_count"] = v unless v.empty? }
+    params.get?(:memory_gb).try { |v| body["memory_gb"] = v unless v.empty? }
 
     node = daemon.create_node(body)
     flash.success = "Node #{node.name} added"

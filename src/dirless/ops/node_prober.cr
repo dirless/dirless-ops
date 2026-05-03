@@ -1,0 +1,80 @@
+require "json"
+require "log"
+require "./models/node"
+
+module Dirless
+  module Ops
+    class NodeProber
+      Log = ::Log.for("dirless-node-prober")
+
+      SSH_KEY  = "/etc/dirless-ops/ansible/backend-atlantic.pem"
+      SSH_PORT = "39124"
+      PROBE    = "/usr/local/bin/dirless-probe"
+
+      def initialize(@config : Config, @notifier : Notifier)
+      end
+
+      def run
+        nodes = Node.all
+        if nodes.empty?
+          Log.info { "No nodes configured, skipping probe" }
+          return
+        end
+        nodes.each { |node| probe(node) }
+      end
+
+      private def probe(node : Node)
+        Log.info { "Probing #{node.name} (#{node.ip})" }
+
+        was_healthy = node.probe_error.nil? && !node.last_probed_at.nil?
+
+        stdout = IO::Memory.new
+        stderr = IO::Memory.new
+
+        status = Process.run(
+          "ssh",
+          args: [
+            "-i", SSH_KEY,
+            "-p", SSH_PORT,
+            "-o", "ConnectTimeout=10",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "BatchMode=yes",
+            "root@#{node.ip}",
+            PROBE,
+          ],
+          output: stdout,
+          error: stderr
+        )
+
+        now = Time.utc
+
+        if status.success?
+          begin
+            data = JSON.parse(stdout.to_s.strip)
+            node.cpu_count = data["cpu_count"]?.try(&.as_i?)
+            node.memory_gb = data["total_memory_mb"]?.try(&.as_i?).try { |m| (m / 1024.0).ceil.to_i }
+            node.free_memory_mb = data["free_memory_mb"]?.try(&.as_i?)
+            node.load_5m = data["load_5m"]?.try(&.as_f?)
+            node.free_disk_gb = data["free_disk_gb"]?.try(&.as_i?)
+            node.last_probed_at = now
+            node.probe_error = nil
+            node.save
+            Log.info { "Probe OK for #{node.name}" }
+          rescue ex
+            node.last_probed_at = now
+            node.probe_error = "parse error: #{ex.message}"
+            node.save
+            Log.error { "Failed to parse probe output for #{node.name}: #{ex.message}" }
+          end
+        else
+          error = stderr.to_s.strip.presence || "ssh failed (exit #{status.exit_code})"
+          node.last_probed_at = now
+          node.probe_error = error
+          node.save
+          Log.warn { "Probe failed for #{node.name}: #{error}" }
+          @notifier.node_down(node.name, node.ip, error) if was_healthy
+        end
+      end
+    end
+  end
+end

@@ -39,6 +39,8 @@ module Dirless
           end
 
           is_primary = parsed["is_primary"]?.try { |v| v.as_bool? || v.as_s? == "true" } || false
+          cpu_count = parsed["cpu_count"]?.try(&.as_i?)
+          memory_gb = parsed["memory_gb"]?.try(&.as_i?)
 
           node = Node.new(
             name: name,
@@ -46,6 +48,8 @@ module Dirless
             region: region,
             provider: provider,
             is_primary: is_primary,
+            cpu_count: cpu_count,
+            memory_gb: memory_gb,
           )
 
           unless node.save
@@ -95,6 +99,8 @@ module Dirless
           parsed["is_primary"]?.try { |v|
             node.is_primary = v.as_bool? || v.as_s? == "true"
           }
+          parsed["cpu_count"]?.try { |v| node.cpu_count = v.as_i? }
+          parsed["memory_gb"]?.try { |v| node.memory_gb = v.as_i? }
 
           unless node.save
             return context.put_status(422).json({"error" => node.errors.map(&.message).join(", ")}).halt

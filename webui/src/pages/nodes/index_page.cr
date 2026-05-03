@@ -23,7 +23,12 @@ class Nodes::IndexPage < MainLayout
             th "IP", class: "px-6 py-3 text-left font-medium text-gray-500"
             th "Region", class: "px-6 py-3 text-left font-medium text-gray-500"
             th "Provider", class: "px-6 py-3 text-left font-medium text-gray-500"
+            th "CPU", class: "px-6 py-3 text-left font-medium text-gray-500"
+            th "Memory", class: "px-6 py-3 text-left font-medium text-gray-500"
+            th "Free Disk", class: "px-6 py-3 text-left font-medium text-gray-500"
+            th "Load 5m", class: "px-6 py-3 text-left font-medium text-gray-500"
             th "Primary", class: "px-6 py-3 text-left font-medium text-gray-500"
+            th "Health", class: "px-6 py-3 text-left font-medium text-gray-500"
             th "", class: "px-6 py-3"
           end
         end
@@ -34,11 +39,27 @@ class Nodes::IndexPage < MainLayout
               td node.ip, class: "px-6 py-3 font-mono text-xs text-gray-600"
               td node.region, class: "px-6 py-3 text-gray-700"
               td node.provider, class: "px-6 py-3 text-gray-500"
+              td node.cpu_count.try { |c| "#{c} cores" } || "—", class: "px-6 py-3 text-gray-500"
+              td node.memory_gb.try { |m| "#{m} GB" } || "—", class: "px-6 py-3 text-gray-500"
+              td node.free_disk_gb.try { |d| "#{d} GB" } || "—", class: "px-6 py-3 text-gray-500"
+              td node.load_5m.try { |l| l.round(2).to_s } || "—", class: "px-6 py-3 text-gray-500"
               td class: "px-6 py-3" do
                 if node.is_primary
                   span "yes", class: "bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs"
                 else
                   span "no", class: "text-gray-400 text-xs"
+                end
+              end
+              td class: "px-6 py-3" do
+                if node.probe_error
+                  span "●", class: "text-red-500", title: node.probe_error.not_nil!
+                elsif lpa = node.last_probed_at
+                  probed_at = Time.parse_rfc3339(lpa) rescue nil
+                  stale = probed_at.nil? || probed_at < Time.utc - 15.minutes
+                  span "●", class: stale ? "text-red-500" : "text-green-500",
+                    title: stale ? "No probe in 15 minutes" : "Last probed #{lpa}"
+                else
+                  span "●", class: "text-gray-300", title: "Never probed"
                 end
               end
               td class: "px-6 py-3 text-right" do

@@ -11,6 +11,7 @@ module Dirless
       getter ansible_inventory : String?
       getter ansible_playbook : String?
       getter mail_spool_dir : String
+      getter ops_alert_email : String?
 
       def initialize(path : String)
         raw = File.read(path)
@@ -29,6 +30,7 @@ module Dirless
 
         @mail_spool_dir = toml["notifications"]?.try(&.["mail_spool_dir"]?.try(&.as_s)) ||
                           "/var/spool/dirless-ops/outbox"
+        @ops_alert_email = toml["notifications"]?.try(&.["ops_alert_email"]?.try(&.as_s))
       end
 
       def self.load(path : String) : Config

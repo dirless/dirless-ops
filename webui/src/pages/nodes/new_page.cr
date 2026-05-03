@@ -12,6 +12,8 @@ class Nodes::NewPage < MainLayout
         field("IP Address", "ip", placeholder: "69.87.217.231", required: true)
         field("Region", "region", placeholder: "USEAST2", required: true)
         field("Provider", "provider", placeholder: "atlanticnet", value: "atlanticnet")
+        field("CPU Cores", "cpu_count", placeholder: "4")
+        field("Memory (GB)", "memory_gb", placeholder: "8")
 
         div class: "mb-4 flex items-center gap-2" do
           input type: "checkbox", id: "is_primary", name: "is_primary", value: "true",
