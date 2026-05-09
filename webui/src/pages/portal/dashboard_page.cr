@@ -215,8 +215,6 @@ HTML
                   th "Region"
                   th "Node"
                   th "Status"
-                  th "Users"
-                  th "Agents"
                   th "Replication Lag"
                   th "Response"
                   th "Last Checked"
@@ -231,8 +229,6 @@ HTML
                     td do
                       span node.status, class: status_class
                     end
-                    td(node.user_count.try(&.to_s) || "0")
-                    td(node.active_agents.try(&.to_s) || "0")
                     td do
                       if node.is_primary
                         span "primary", class: "badge badge-muted"
