@@ -140,14 +140,6 @@ class Portal::DashboardPage < PortalLayout
             text "Replication lag"
           end
         end
-        div class: "stat-card" do
-          div class: (last_checked.empty? ? "stat-value stat-value-pending" : "stat-value") do
-            text last_checked.empty? ? "Never" : last_checked
-          end
-          div class: "stat-label" do
-            text "Last sync check"
-          end
-        end
       end
 
       # Subdomain info
