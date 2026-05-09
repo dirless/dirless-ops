@@ -87,7 +87,7 @@ class Portal::DashboardPage < PortalLayout
           total_tenants  += n.tenant_count || 0
           total_users    += n.user_count   || 0
           total_agents   += n.active_agents || 0
-          ok_nodes       += 1 if n.status == "ok"
+          ok_nodes       += 1 if n.status == "up"
           if last_checked.empty? && n.checked_at
             last_checked = n.checked_at.not_nil!
           end
@@ -225,7 +225,7 @@ HTML
               end
               tbody do
                 cs.nodes.each do |node|
-                  status_class = node.status == "ok" ? "badge badge-ok" : "badge badge-error"
+                  status_class = node.status == "up" ? "badge badge-ok" : "badge badge-error"
                   tr do
                     td node.region
                     td do
