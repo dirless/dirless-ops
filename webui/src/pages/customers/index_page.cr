@@ -37,7 +37,7 @@ class Customers::IndexPage < MainLayout
               td customer.port.to_s, class: "px-6 py-3 text-gray-500"
               td customer.aws_account_id || "-", class: "px-6 py-3 text-gray-500"
               td class: "px-6 py-3 text-right" do
-                form action: "/customers/#{customer.name}/delete", method: "post" do
+                form action: "/customers/#{customer.name}", method: "post" do
                   input type: "hidden", name: "_method", value: "DELETE"
                   button type: "submit", class: "text-red-600 hover:underline text-xs",
                     onclick: "return confirm('Delete #{customer.name}?')" do
