@@ -117,9 +117,8 @@ class Portal::DashboardPage < PortalLayout
           end
         end
         div class: "stat-card" do
-          agent_css = total_agents > 0 ? "stat-value" : "stat-value stat-value-pending"
-          div class: agent_css do
-            text total_agents > 0 ? total_agents.to_s : "0"
+          div class: "stat-value" do
+            text total_agents.to_s
           end
           div class: "stat-label" do
             text "Active agents"
