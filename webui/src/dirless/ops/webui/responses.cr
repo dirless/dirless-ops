@@ -94,7 +94,10 @@ module Dirless
         property id : Int32
         property email : String
         property customer_name : String
+        property first_name : String?
+        property last_name : String?
         property company : String?
+        property country : String?
         property provisioned : Bool
         property created_at : String?
       end

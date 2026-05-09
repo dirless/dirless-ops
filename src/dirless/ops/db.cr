@@ -75,6 +75,10 @@ module Dirless
       SQL
       "CREATE INDEX IF NOT EXISTS idx_provision_jobs_status ON provision_jobs (status)",
       "CREATE INDEX IF NOT EXISTS idx_provision_jobs_customer ON provision_jobs (customer_name)",
+      # Migration: first name, last name, country on customer accounts
+      "ALTER TABLE customer_accounts ADD COLUMN first_name TEXT",
+      "ALTER TABLE customer_accounts ADD COLUMN last_name TEXT",
+      "ALTER TABLE customer_accounts ADD COLUMN country TEXT",
       # Migration: replication lag tracking
       "ALTER TABLE health_checks ADD COLUMN data_updated_at DATETIME",
       # Migration: agent heartbeat tracking

@@ -1,3 +1,5 @@
+require "./countries"
+
 class Portal::RegisterPage
   include Lucky::HTMLPage
 
@@ -31,11 +33,37 @@ class Portal::RegisterPage
             end
 
             form action: "/register", method: "post" do
+              div class: "form-row" do
+                div class: "form-group" do
+                  label "First name", for: "first_name", class: "form-label"
+                  input type: "text", id: "first_name", name: "first_name",
+                    value: @values["first_name"]? || "",
+                    autofocus: "autofocus", autocomplete: "given-name", required: "required",
+                    class: "form-input #{"form-input-error" unless (@errors["first_name"]?.nil?)}",
+                    placeholder: "Jane"
+                  if err = @errors["first_name"]?
+                    span err, class: "field-error"
+                  end
+                end
+
+                div class: "form-group" do
+                  label "Last name", for: "last_name", class: "form-label"
+                  input type: "text", id: "last_name", name: "last_name",
+                    value: @values["last_name"]? || "",
+                    autocomplete: "family-name", required: "required",
+                    class: "form-input #{"form-input-error" unless (@errors["last_name"]?.nil?)}",
+                    placeholder: "Smith"
+                  if err = @errors["last_name"]?
+                    span err, class: "field-error"
+                  end
+                end
+              end
+
               div class: "form-group" do
                 label "Company name", for: "company", class: "form-label"
                 input type: "text", id: "company", name: "company",
                   value: @values["company"]? || "",
-                  autofocus: "autofocus", autocomplete: "organization", required: "required",
+                  autocomplete: "organization", required: "required",
                   class: "form-input #{"form-input-error" unless (@errors["company"]?.nil?)}",
                   placeholder: "Acme Inc."
                 if err = @errors["company"]?
@@ -51,6 +79,24 @@ class Portal::RegisterPage
                   class: "form-input #{"form-input-error" unless (@errors["email"]?.nil?)}",
                   placeholder: "you@company.com"
                 if err = @errors["email"]?
+                  span err, class: "field-error"
+                end
+              end
+
+              div class: "form-group" do
+                label "Country", for: "country", class: "form-label"
+                selected_country = @values["country"]? || "US"
+                tag "select", id: "country", name: "country", required: "required",
+                  class: "form-input #{"form-input-error" unless (@errors["country"]?.nil?)}" do
+                  COUNTRIES.each do |code, name|
+                    if code == selected_country
+                      option name, value: code, selected: "selected"
+                    else
+                      option name, value: code
+                    end
+                  end
+                end
+                if err = @errors["country"]?
                   span err, class: "field-error"
                 end
               end
@@ -174,6 +220,12 @@ class Portal::RegisterPage
       background: rgba(248, 81, 73, 0.12);
       border: 1px solid rgba(248, 81, 73, 0.35);
       color: #ff7b72;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 0.75rem;
     }
 
     .form-group {

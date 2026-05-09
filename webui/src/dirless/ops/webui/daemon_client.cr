@@ -69,8 +69,8 @@ module Dirless
           status.find { |c| c.name == name }
         end
 
-        def portal_register(email : String, password : String, company : String) : PortalAccountResponse
-          PortalAccountResponse.from_json(post("/v1/portal/register", {"email" => email, "password" => password, "company" => company}))
+        def portal_register(email : String, password : String, first_name : String, last_name : String, company : String, country : String) : PortalAccountResponse
+          PortalAccountResponse.from_json(post("/v1/portal/register", {"email" => email, "password" => password, "first_name" => first_name, "last_name" => last_name, "company" => company, "country" => country}))
         end
 
         def portal_login(email : String, password : String) : PortalAccountResponse

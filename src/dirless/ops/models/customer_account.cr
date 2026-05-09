@@ -12,7 +12,10 @@ module Dirless
       column email : String
       column password_hash : String
       column customer_name : String
+      column first_name : String?
+      column last_name : String?
       column company : String?
+      column country : String?
       column provisioned : Bool
       timestamps
 
@@ -31,7 +34,10 @@ module Dirless
           "id"            => id,
           "email"         => email,
           "customer_name" => customer_name,
+          "first_name"    => first_name,
+          "last_name"     => last_name,
           "company"       => company,
+          "country"       => country,
           "provisioned"   => provisioned,
           "created_at"    => created_at.try(&.to_rfc3339),
         }

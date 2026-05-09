@@ -20,16 +20,22 @@ module Dirless
             return context.put_status(400).json({"error" => "malformed JSON: #{ex.message}"}).halt
           end
 
-          email = parsed["email"]?.try(&.as_s).to_s.strip.downcase
-          password = parsed["password"]?.try(&.as_s).to_s
-          company = parsed["company"]?.try(&.as_s).to_s.strip
+          email      = parsed["email"]?.try(&.as_s).to_s.strip.downcase
+          password   = parsed["password"]?.try(&.as_s).to_s
+          first_name = parsed["first_name"]?.try(&.as_s).to_s.strip
+          last_name  = parsed["last_name"]?.try(&.as_s).to_s.strip
+          company    = parsed["company"]?.try(&.as_s).to_s.strip
+          country    = parsed["country"]?.try(&.as_s).to_s.strip
 
           errors = {} of String => String
-          errors["email"] = "Required" if email.empty?
-          errors["email"] = "Invalid email" unless email.empty? || email.matches?(/\A[^@\s]+@[^@\s]+\.[^@\s]+\z/)
-          errors["password"] = "Required" if password.empty?
-          errors["password"] = "Must be at least 12 characters" if !password.empty? && password.size < 12
-          errors["company"] = "Required" if company.empty?
+          errors["email"]      = "Required"                       if email.empty?
+          errors["email"]      = "Invalid email"                  unless email.empty? || email.matches?(/\A[^@\s]+@[^@\s]+\.[^@\s]+\z/)
+          errors["password"]   = "Required"                       if password.empty?
+          errors["password"]   = "Must be at least 12 characters" if !password.empty? && password.size < 12
+          errors["first_name"] = "Required"                       if first_name.empty?
+          errors["last_name"]  = "Required"                       if last_name.empty?
+          errors["company"]    = "Required"                       if company.empty?
+          errors["country"]    = "Required"                       if country.empty?
 
           unless errors.empty?
             return context.put_status(422).json({"error" => errors.map { |f, m| "#{f}: #{m}" }.join("; "), "fields" => errors}).halt
@@ -70,7 +76,10 @@ module Dirless
               email: email,
               password_hash: CustomerAccount.hash_password(password),
               customer_name: customer_name,
+              first_name: first_name,
+              last_name: last_name,
               company: company,
+              country: country,
               provisioned: false,
             )
 
