@@ -215,7 +215,6 @@ HTML
                   th "Region"
                   th "Node"
                   th "Status"
-                  th "Tenants"
                   th "Users"
                   th "Agents"
                   th "Replication Lag"
@@ -237,7 +236,6 @@ HTML
                     td do
                       span node.status, class: status_class
                     end
-                    td(node.tenant_count.try(&.to_s) || "0")
                     td(node.user_count.try(&.to_s) || "0")
                     td(node.active_agents.try(&.to_s) || "0")
                     td do
