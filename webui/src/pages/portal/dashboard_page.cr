@@ -219,7 +219,7 @@ HTML
                   th "Agents"
                   th "Replication Lag"
                   th "Response"
-                  th "Checked"
+                  th "Last Checked"
                 end
               end
               tbody do
@@ -250,7 +250,7 @@ HTML
                         text "—"
                       end
                     end
-                    td(node.checked_at || "—")
+                    td(node.checked_at ? time_ago(node.checked_at.not_nil!) : "—")
                   end
                 end
               end
@@ -259,6 +259,21 @@ HTML
         end
       end
     end
+  end
+
+  private def time_ago(rfc3339 : String) : String
+    t = Time.parse_rfc3339(rfc3339)
+    secs = (Time.utc - t).total_seconds.to_i
+    secs = 0 if secs < 0
+    if secs < 60
+      "#{secs}s ago"
+    elsif secs < 3600
+      "#{secs // 60}m #{secs % 60}s ago"
+    else
+      "#{secs // 3600}h ago"
+    end
+  rescue
+    rfc3339
   end
 
   private def format_lag(seconds : Int32) : String
