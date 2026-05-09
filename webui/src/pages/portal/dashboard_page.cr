@@ -227,12 +227,7 @@ HTML
                   status_class = node.status == "up" ? "badge badge-ok" : "badge badge-error"
                   tr do
                     td node.region
-                    td do
-                      text node.node_name
-                      if node.is_primary
-                        span " primary", class: "badge-primary"
-                      end
-                    end
+                    td node.node_name
                     td do
                       span node.status, class: status_class
                     end
