@@ -136,21 +136,6 @@ class Portal::DashboardPage < PortalLayout
         end
       end
 
-      # Enrollment token
-      div class: "info-section" do
-        div class: "info-label" do
-          text "Enrollment token"
-        end
-        details class: "token-details" do
-          summary class: "token-summary" do
-            span "••••••••••••••••", class: "token-masked"
-            span "Reveal", class: "token-reveal-label"
-          end
-          div class: "code-box token-value" do
-            text hmac_secret
-          end
-        end
-      end
 
       # Enrollment instructions
       div class: "section-heading" do
@@ -173,7 +158,7 @@ class Portal::DashboardPage < PortalLayout
 <span class="c-comment"># one-time enrollment per host</span>
 <span class="c-cmd">dirless-cli enroll</span> \\
   <span class="c-flag">--server</span> <span class="c-val">https://#{subdomain}</span> \\
-  <span class="c-flag">--token</span>  <span class="c-val">$ENROLLMENT_TOKEN</span></pre>
+  <span class="c-flag">--token</span>  <span class="c-val">#{hmac_secret}</span></pre>
 HTML
         end
       end
