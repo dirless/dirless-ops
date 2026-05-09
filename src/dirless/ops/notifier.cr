@@ -30,7 +30,7 @@ module Dirless
 
         Great news — your Dirless environment is ready.
 
-        Dashboard: https://#{customer_name}.dirless.com
+        Dashboard: https://portal.dirless.com
 
         If you have any questions, just reply to this email.
 
