@@ -133,6 +133,7 @@ module Dirless
           customer.destroy
           if account
             Ops.notifier.account_deleted(account.email, account.company || name)
+            account.destroy
           end
           context.put_status(204).halt
         end
