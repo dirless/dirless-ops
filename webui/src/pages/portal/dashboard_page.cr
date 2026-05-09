@@ -125,21 +125,6 @@ class Portal::DashboardPage < PortalLayout
             text "Active agents"
           end
         end
-        div class: "stat-card" do
-          if ml = max_lag
-            lag_class = ml <= 120 ? "stat-value" : "stat-value stat-value-warn"
-            div class: lag_class do
-              text format_lag(ml)
-            end
-          else
-            div class: "stat-value stat-value-pending" do
-              text "N/A"
-            end
-          end
-          div class: "stat-label" do
-            text "Replication lag"
-          end
-        end
       end
 
       # Subdomain info
