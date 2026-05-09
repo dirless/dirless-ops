@@ -5,4 +5,5 @@ dirless-ops
 *.db
 /config/dirless-ops.toml
 /bin/ameba
+/cli/bin/ameba
 /webui/bin/ameba
