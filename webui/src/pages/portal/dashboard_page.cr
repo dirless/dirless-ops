@@ -247,7 +247,7 @@ HTML
                         lag_class = lag <= 120 ? "badge badge-ok" : "badge badge-error"
                         span format_lag(lag), class: lag_class
                       else
-                        text "—"
+                        span "In sync", class: "badge badge-ok"
                       end
                     end
                     td do
