@@ -153,7 +153,8 @@ class Portal::DashboardPage < PortalLayout
           raw <<-HTML
 <pre><span class="c-comment"># download dirless-cli (Linux x86_64)</span>
 <span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://github.com/weirdbricks/dirless/releases/latest/download/dirless-cli</span> \
-  <span class="c-flag">-o</span> /usr/local/bin/dirless-cli <span class="c-flag">&amp;&amp;</span> chmod <span class="c-val">+x</span> /usr/local/bin/dirless-cli
+  <span class="c-flag">-o</span> /usr/local/bin/dirless-cli
+chmod <span class="c-val">+x</span> /usr/local/bin/dirless-cli
 
 <span class="c-comment"># one-time enrollment per host</span>
 <span class="c-cmd">dirless-cli enroll</span> \\
