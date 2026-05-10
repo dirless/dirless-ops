@@ -20,6 +20,7 @@ module Dirless
       column load_5m : Float64?
       column last_probed_at : Time?
       column probe_error : String?
+      column services_json : String?
       timestamps
 
       def to_response

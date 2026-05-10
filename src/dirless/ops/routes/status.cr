@@ -53,6 +53,14 @@ module Dirless
                 nil
               end
 
+              service_state = begin
+                if (sj = node.services_json)
+                  JSON.parse(sj)[customer.name]?.try(&.as_s)
+                end
+              rescue
+                nil
+              end
+
               {
                 "node_id"                => node.id,
                 "node_name"              => node.name,
@@ -70,6 +78,7 @@ module Dirless
                 "agents"                 => agents,
                 "error"                  => latest.try(&.error),
                 "checked_at"             => latest.try(&.checked_at.try(&.to_rfc3339)),
+                "service_state"          => service_state,
               }
             end
 

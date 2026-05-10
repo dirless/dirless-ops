@@ -64,6 +64,7 @@ module Dirless
         property agents : Array(AgentInfo)?
         property error : String?
         property checked_at : String?
+        property service_state : String?
       end
 
       struct CustomerStatusResponse

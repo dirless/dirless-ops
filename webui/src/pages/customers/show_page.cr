@@ -51,6 +51,7 @@ class Customers::ShowPage < MainLayout
               th "Node", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Region", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Status", class: "px-6 py-3 text-left font-medium text-gray-500"
+              th "Service", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Enrolled Nodes", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Users", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Active Agents", class: "px-6 py-3 text-left font-medium text-gray-500"
@@ -71,6 +72,9 @@ class Customers::ShowPage < MainLayout
                 td node.region, class: "px-6 py-3 text-gray-600"
                 td class: "px-6 py-3" do
                   status_badge(node.status)
+                end
+                td class: "px-6 py-3" do
+                  service_badge(node.service_state)
                 end
                 td class: "px-6 py-3" do
                   if (tc = node.tenant_count)
@@ -236,6 +240,17 @@ class Customers::ShowPage < MainLayout
     else
       "#{seconds // 3600}h #{(seconds % 3600) // 60}m"
     end
+  end
+
+  private def service_badge(state : String?)
+    label, css = case state
+                 when "active"            then {"active", "bg-green-100 text-green-800"}
+                 when "failed"            then {"failed", "bg-red-100 text-red-800"}
+                 when "inactive", "dead"  then {state.not_nil!, "bg-gray-100 text-gray-600"}
+                 when nil                 then {"unknown", "bg-gray-100 text-gray-400"}
+                 else                          {state.not_nil!, "bg-yellow-100 text-yellow-800"}
+                 end
+    span label, class: "px-2 py-0.5 rounded text-xs font-medium #{css}"
   end
 
   private def status_badge(status : String)

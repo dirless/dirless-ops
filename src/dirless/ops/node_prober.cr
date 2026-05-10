@@ -58,6 +58,7 @@ module Dirless
             node.free_disk_gb = data["free_disk_gb"]?.try(&.as_i?)
             node.last_probed_at = now
             node.probe_error = nil
+            node.services_json = fetch_services(node.ip)
             node.save
             Log.info { "Probe OK for #{node.name}" }
           rescue ex
@@ -74,6 +75,39 @@ module Dirless
           Log.warn { "Probe failed for #{node.name}: #{error}" }
           @notifier.node_down(node.name, node.ip, error) if was_healthy
         end
+      end
+      # Returns a JSON string mapping customer_name → active state, e.g.
+      # {"xyz-5001":"active","abc-5000":"inactive"}
+      private def fetch_services(ip : String) : String
+        stdout = IO::Memory.new
+        status = Process.run(
+          "ssh",
+          args: [
+            "-i", SSH_KEY,
+            "-p", SSH_PORT,
+            "-o", "ConnectTimeout=10",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "BatchMode=yes",
+            "root@#{ip}",
+            "systemctl list-units 'dirless-backend@*' --no-pager --plain --all 2>/dev/null | " \
+            "awk '/dirless-backend@/{gsub(/dirless-backend@|.service/,\"\",$1); gsub(/[^a-z0-9-]/,\"\",$1); print $1\"|\"$3}'",
+          ],
+          output: stdout,
+          error: Process::Redirect::Close
+        )
+
+        return "{}" unless status.success?
+
+        services = {} of String => String
+        stdout.to_s.lines.each do |line|
+          parts = line.strip.split("|")
+          next unless parts.size == 2
+          customer_name, state = parts
+          services[customer_name] = state unless customer_name.empty?
+        end
+        services.to_json
+      rescue
+        "{}"
       end
     end
   end

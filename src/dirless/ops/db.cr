@@ -84,6 +84,8 @@ module Dirless
       # Migration: agent heartbeat tracking
       "ALTER TABLE health_checks ADD COLUMN active_agents INTEGER",
       "ALTER TABLE health_checks ADD COLUMN agents_json TEXT",
+      # Migration: per-node backend service states from node prober
+      "ALTER TABLE nodes ADD COLUMN services_json TEXT",
     ]
 
     def self.setup_db(database_path : String)
