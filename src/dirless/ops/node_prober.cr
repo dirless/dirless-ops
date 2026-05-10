@@ -89,8 +89,7 @@ module Dirless
             "-o", "StrictHostKeyChecking=no",
             "-o", "BatchMode=yes",
             "root@#{ip}",
-            "systemctl list-units 'dirless-backend@*' --no-pager --plain --all 2>/dev/null | " \
-            "awk '/dirless-backend@/{gsub(/dirless-backend@|.service/,\"\",$1); gsub(/[^a-z0-9-]/,\"\",$1); print $1\"|\"$3}'",
+            "systemctl list-units --all --no-pager 'dirless-backend@*' --output=json 2>/dev/null",
           ],
           output: stdout,
           error: Process::Redirect::Close
@@ -99,11 +98,11 @@ module Dirless
         return "{}" unless status.success?
 
         services = {} of String => String
-        stdout.to_s.lines.each do |line|
-          parts = line.strip.split("|")
-          next unless parts.size == 2
-          customer_name, state = parts
-          services[customer_name] = state unless customer_name.empty?
+        JSON.parse(stdout.to_s).as_a.each do |unit|
+          unit_name = unit["unit"]?.try(&.as_s) || next
+          customer = unit_name.lchop("dirless-backend@").rchop(".service")
+          next if customer.empty?
+          services[customer] = unit["active"]?.try(&.as_s) || "unknown"
         end
         services.to_json
       rescue
