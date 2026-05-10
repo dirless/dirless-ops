@@ -151,12 +151,17 @@ class Portal::DashboardPage < PortalLayout
         end
         div class: "terminal-body" do
           raw <<-HTML
-<pre><span class="c-comment"># download dirless-cli (Linux x86_64)</span>
-<span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://github.com/weirdbricks/dirless/releases/latest/download/dirless-cli</span> \
+<pre><span class="c-comment"># option 1 — RPM (RHEL / Amazon Linux 2023)</span>
+<span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://dirless.com/rpm/dirless.repo</span> \
+  <span class="c-flag">-o</span> /etc/yum.repos.d/dirless.repo
+<span class="c-cmd">dnf install</span> <span class="c-val">-y dirless-cli</span>
+
+<span class="c-comment"># option 2 — direct binary (Linux x86_64)</span>
+<span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://github.com/dirless/dirless-cli/releases/latest/download/dirless-cli-x86_64</span> \
   <span class="c-flag">-o</span> /usr/local/bin/dirless-cli
 chmod <span class="c-val">+x</span> /usr/local/bin/dirless-cli
 
-<span class="c-comment"># one-time enrollment per host</span>
+<span class="c-comment"># enroll this host</span>
 <span class="c-cmd">dirless-cli enroll</span> \\
   <span class="c-flag">--server</span> <span class="c-val">https://#{subdomain}</span> \\
   <span class="c-flag">--token</span>  <span class="c-val">#{hmac_secret}</span></pre>
