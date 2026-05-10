@@ -135,7 +135,19 @@ module Dirless
             Ops.notifier.account_deleted(account.email, account.company || name)
             account.destroy
           end
+          queue_deprovision(name)
           context.put_status(204).halt
+        end
+
+        private def queue_deprovision(customer_name : String)
+          spool_dir = Ops.config.deprovision_spool_dir
+          Dir.mkdir_p(spool_dir)
+          tmp = File.join(spool_dir, "#{customer_name}.json.tmp")
+          final = File.join(spool_dir, "#{customer_name}.json")
+          File.write(tmp, {"customer_name" => customer_name}.to_json)
+          File.rename(tmp, final)
+        rescue ex
+          Log.error { "Failed to queue deprovision for #{customer_name}: #{ex.message}" }
         end
       end
     end
