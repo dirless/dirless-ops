@@ -86,6 +86,11 @@ module Dirless
       "ALTER TABLE health_checks ADD COLUMN agents_json TEXT",
       # Migration: per-node backend service states from node prober
       "ALTER TABLE nodes ADD COLUMN services_json TEXT",
+      # Migration: Stripe integration
+      "ALTER TABLE customer_accounts ADD COLUMN stripe_customer_id TEXT",
+      "ALTER TABLE customer_accounts ADD COLUMN beta_customer INTEGER NOT NULL DEFAULT 0",
+      "UPDATE customer_accounts SET beta_customer = 0 WHERE beta_customer IS NULL",
+      "ALTER TABLE customer_accounts ADD COLUMN plan TEXT",
     ]
 
     def self.setup_db(database_path : String)

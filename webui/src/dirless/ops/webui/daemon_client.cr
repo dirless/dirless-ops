@@ -77,6 +77,20 @@ module Dirless
           PortalAccountResponse.from_json(post("/v1/portal/login", {"email" => email, "password" => password}))
         end
 
+        def create_checkout_session(customer_name : String, plan : String, success_url : String, cancel_url : String) : String
+          resp = CheckoutSessionResponse.from_json(post("/v1/portal/checkout", {
+            "customer_name" => customer_name,
+            "plan"          => plan,
+            "success_url"   => success_url,
+            "cancel_url"    => cancel_url,
+          }))
+          resp.url
+        end
+
+        def verify_checkout_session(session_id : String) : PortalAccountResponse
+          PortalAccountResponse.from_json(get("/v1/portal/checkout/#{session_id}"))
+        end
+
         private def get(path : String) : String
           response = HTTP::Client.get("#{@url}#{path}", headers: auth_headers)
           check!(response)

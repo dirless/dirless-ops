@@ -100,7 +100,14 @@ module Dirless
         property company : String?
         property country : String?
         property provisioned : Bool
+        property plan : String
         property created_at : String?
+      end
+
+      struct CheckoutSessionResponse
+        include JSON::Serializable
+
+        property url : String
       end
     end
   end

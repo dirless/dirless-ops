@@ -17,6 +17,9 @@ module Dirless
       column company : String?
       column country : String?
       column provisioned : Bool
+      column stripe_customer_id : String?
+      column beta_customer : Bool
+      column plan : String?
       timestamps
 
       def self.hash_password(password : String) : String
@@ -39,6 +42,7 @@ module Dirless
           "company"       => company,
           "country"       => country,
           "provisioned"   => provisioned,
+          "plan"          => (plan || "beta"),
           "created_at"    => created_at.try(&.to_rfc3339),
         }
       end

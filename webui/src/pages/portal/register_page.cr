@@ -14,6 +14,24 @@ class Portal::RegisterPage
         meta charset: "utf-8"
         meta name: "viewport", content: "width=device-width, initial-scale=1"
         raw "<style>#{register_css}</style>"
+        raw <<-JS
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            var radios = document.querySelectorAll('input[name="plan"]');
+            var btn = document.getElementById('submit-btn');
+            function update() {
+              var val = document.querySelector('input[name="plan"]:checked').value;
+              btn.textContent = val === 'beta' ? 'Create account' : 'Create account & continue to payment';
+              document.querySelectorAll('.plan-card').forEach(function(card) {
+                card.classList.remove('plan-card-selected');
+              });
+              document.querySelector('input[name="plan"]:checked').closest('.plan-card').classList.add('plan-card-selected');
+            }
+            radios.forEach(function(r) { r.addEventListener('change', update); });
+            update();
+          });
+        </script>
+        JS
       end
       body do
         div class: "auth-wrapper" do
@@ -123,7 +141,39 @@ class Portal::RegisterPage
                 end
               end
 
-              button type: "submit", class: "btn-submit" do
+              div class: "form-group" do
+                label "Choose your plan", class: "form-label"
+                div class: "plan-grid" do
+                  selected_plan = @values["plan"]? || "beta"
+                  [
+                    {value: "beta",    label: "Beta",    price: "Free",          sub: "Up to 3 servers"},
+                    {value: "starter", label: "Starter", price: "$24.50/mo",     sub: "Up to 10 servers"},
+                    {value: "growth",  label: "Growth",  price: "$99.50/mo",     sub: "Up to 50 servers"},
+                    {value: "scale",   label: "Scale",   price: "$249.50/mo",    sub: "Up to 200 servers"},
+                  ].each do |plan|
+                    checked = selected_plan == plan[:value]
+                    div class: "plan-card #{"plan-card-selected" if checked}" do
+                      label class: "plan-label" do
+                        if checked
+                          input type: "radio", name: "plan", value: plan[:value], class: "plan-radio", checked: "checked"
+                        else
+                          input type: "radio", name: "plan", value: plan[:value], class: "plan-radio"
+                        end
+                        div class: "plan-info" do
+                          span plan[:label], class: "plan-name"
+                          span plan[:price], class: "plan-price"
+                          span plan[:sub], class: "plan-sub"
+                        end
+                      end
+                    end
+                  end
+                end
+                para class: "plan-note" do
+                  text "* Beta pricing — locked in permanently when you sign up now"
+                end
+              end
+
+              button type: "submit", class: "btn-submit", id: "submit-btn" do
                 text "Create account"
               end
             end
@@ -299,6 +349,74 @@ class Portal::RegisterPage
       margin-top: 1.25rem;
       font-size: 0.85rem;
       color: var(--muted);
+    }
+
+    .plan-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.35rem;
+    }
+
+    .plan-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .plan-card:hover {
+      border-color: var(--accent);
+    }
+
+    .plan-card-selected {
+      border-color: var(--accent);
+      background: rgba(88, 166, 255, 0.06);
+    }
+
+    .plan-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.6rem 0.75rem;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .plan-radio {
+      margin-top: 0.2rem;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .plan-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .plan-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .plan-price {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .plan-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .plan-note {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
     }
     CSS
   end

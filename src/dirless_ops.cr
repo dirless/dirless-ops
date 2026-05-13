@@ -2,6 +2,7 @@ require "grip"
 require "./dirless/ops/config"
 require "./dirless/ops/db"
 require "./dirless/ops/notifier"
+require "./dirless/ops/stripe_client"
 
 # Load config and register Granite connection BEFORE requiring models.
 # Granite's `connection` macro validates the connection exists at class-load
@@ -63,6 +64,7 @@ module Dirless
 
     @@config : Config? = nil
     @@notifier : Notifier? = nil
+    @@stripe_client : StripeClient? = nil
 
     def self.config : Config
       @@config || raise "Ops.config accessed before initialization"
@@ -78,6 +80,14 @@ module Dirless
 
     def self.notifier=(n : Notifier)
       @@notifier = n
+    end
+
+    def self.stripe_client : StripeClient?
+      @@stripe_client
+    end
+
+    def self.stripe_client=(client : StripeClient?)
+      @@stripe_client = client
     end
 
     class Application
@@ -117,6 +127,8 @@ module Dirless
           scope "/portal" do
             post "/register", Controllers::PortalRegister
             post "/login", Controllers::PortalLogin
+            post "/checkout", Controllers::PortalCreateCheckout
+            get "/checkout/:session_id", Controllers::PortalVerifyCheckout
           end
 
           scope "/provision-jobs" do
@@ -130,6 +142,9 @@ module Dirless
 
     Ops.config = _config
     Ops.notifier = _notifier
+    if (key = _config.stripe_secret_key) && !key.empty?
+      Ops.stripe_client = StripeClient.new(key)
+    end
 
     Poller.new(_config.polling_interval_seconds).start
 

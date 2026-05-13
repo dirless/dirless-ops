@@ -48,9 +48,9 @@ module Dirless
           # Wrap all writes in a transaction so customer + account + job
           # are created atomically (no partial state on failure).
           db = Granite::Connections["sqlite"].not_nil![:writer].database
-          db.exec("BEGIN IMMEDIATE")
-
           begin
+            db.exec("BEGIN IMMEDIATE")
+
             # Atomic port allocation: SELECT MAX inside the transaction
             # prevents two concurrent registrations from getting the same port.
             # BEGIN IMMEDIATE acquires a write lock immediately.
@@ -81,6 +81,7 @@ module Dirless
               company: company,
               country: country,
               provisioned: false,
+              beta_customer: false,
             )
 
             unless account.save
@@ -96,10 +97,111 @@ module Dirless
             Ops.notifier.welcome(email, company, customer_name)
           rescue ex
             db.exec("ROLLBACK") rescue nil
-            raise ex
+            return context.put_status(503).json({"error" => "Service temporarily unavailable, please try again"}).halt
+          end
+
+          if (stripe = Ops.stripe_client)
+            begin
+              beta = Ops.config.beta_mode
+              meta = {"customer_name" => customer_name}
+              meta["beta"] = "true" if beta
+              stripe_id = stripe.create_customer(
+                email: email,
+                name: "#{first_name} #{last_name}",
+                metadata: meta
+              )
+              account.stripe_customer_id = stripe_id
+              account.beta_customer = beta
+              account.save
+            rescue ex
+              Log.error { "Stripe customer creation failed for #{email}: #{ex.message}" }
+            end
           end
 
           context.put_status(201).json(account.to_response).halt
+        end
+      end
+
+      class PortalCreateCheckout
+        include Grip::Controllers::HTTP
+
+        VALID_PLANS = {"starter", "growth", "scale"}
+
+        def post(context : Context) : Context
+          body = context.request.body.try(&.gets_to_end) || ""
+          begin
+            parsed = JSON.parse(body)
+          rescue ex : JSON::ParseException
+            return context.put_status(400).json({"error" => "malformed JSON"}).halt
+          end
+
+          customer_name = parsed["customer_name"]?.try(&.as_s).to_s.strip
+          plan          = parsed["plan"]?.try(&.as_s).to_s.strip.downcase
+          success_url   = parsed["success_url"]?.try(&.as_s).to_s.strip
+          cancel_url    = parsed["cancel_url"]?.try(&.as_s).to_s.strip
+
+          unless VALID_PLANS.includes?(plan)
+            return context.put_status(422).json({"error" => "invalid plan"}).halt
+          end
+
+          stripe = Ops.stripe_client
+          return context.put_status(503).json({"error" => "payments not configured"}).halt unless stripe
+
+          account = CustomerAccount.find_by(customer_name: customer_name)
+          return context.put_status(404).json({"error" => "account not found"}).halt unless account
+
+          stripe_customer_id = account.stripe_customer_id
+          return context.put_status(422).json({"error" => "no stripe customer on record"}).halt unless stripe_customer_id
+
+          beta    = Ops.config.beta_mode
+          price_key = beta ? "#{plan}_beta" : "#{plan}_full"
+          price_id  = Ops.config.stripe_prices[price_key]?
+          return context.put_status(503).json({"error" => "price not configured for #{price_key}"}).halt unless price_id
+
+          begin
+            url = stripe.create_checkout_session(
+              customer_id:   stripe_customer_id,
+              price_id:      price_id,
+              customer_name: customer_name,
+              plan:          plan,
+              success_url:   success_url,
+              cancel_url:    cancel_url
+            )
+            context.put_status(200).json({"url" => url}).halt
+          rescue ex
+            Log.error { "Stripe checkout session creation failed: #{ex.message}" }
+            context.put_status(502).json({"error" => "failed to create checkout session"}).halt
+          end
+        end
+      end
+
+      class PortalVerifyCheckout
+        include Grip::Controllers::HTTP
+
+        def get(context : Context) : Context
+          session_id = context.fetch_path_params["session_id"]
+
+          stripe = Ops.stripe_client
+          return context.put_status(503).json({"error" => "payments not configured"}).halt unless stripe
+
+          begin
+            result = stripe.retrieve_checkout_session(session_id)
+          rescue ex
+            Log.error { "Stripe session retrieval failed: #{ex.message}" }
+            return context.put_status(502).json({"error" => "failed to retrieve session"}).halt
+          end
+
+          unless result[:payment_status] == "paid"
+            return context.put_status(402).json({"error" => "payment not completed"}).halt
+          end
+
+          account = CustomerAccount.find_by(customer_name: result[:customer_name])
+          return context.put_status(404).json({"error" => "account not found"}).halt unless account
+
+          account.plan = result[:plan]
+          account.save
+
+          context.put_status(200).json(account.to_response).halt
         end
       end
 
