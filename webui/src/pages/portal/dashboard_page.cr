@@ -177,12 +177,16 @@ HTML
               end
               tbody do
                 cs.nodes.each do |node|
-                  status_class = node.status == "up" ? "badge badge-ok" : "badge badge-error"
+                  status_class, status_label = case node.status
+                                               when "up"      then {"badge badge-ok",   "Up"}
+                                               when "unknown" then {"badge badge-muted", "Starting"}
+                                               else                {"badge badge-error", "Down"}
+                                               end
                   tr do
                     td node.region
                     td node.node_name
                     td do
-                      span node.status, class: status_class
+                      span status_label, class: status_class
                     end
                     td do
                       if node.is_primary
