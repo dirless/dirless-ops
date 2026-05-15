@@ -177,10 +177,14 @@ HTML
               end
               tbody do
                 cs.nodes.each do |node|
-                  status_class, status_label = case node.status
-                                               when "up"      then {"badge badge-ok",   "Up"}
-                                               when "unknown" then {"badge badge-muted", "Starting"}
-                                               else                {"badge badge-error", "Down"}
+                  starting = node.status != "up" &&
+                             !{"active", "failed"}.includes?(node.service_state)
+                  status_class, status_label = if node.status == "up"
+                                                 {"badge badge-ok",   "Up"}
+                                               elsif starting
+                                                 {"badge badge-muted", "Starting"}
+                                               else
+                                                 {"badge badge-error", "Down"}
                                                end
                   tr do
                     td node.region
