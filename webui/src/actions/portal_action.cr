@@ -1,6 +1,8 @@
 abstract class PortalAction < Lucky::Action
   accepted_formats [:html]
 
+  expose flash
+
   before require_portal_auth
 
   private def require_portal_auth

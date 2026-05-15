@@ -37,7 +37,7 @@ class Portal::CreateAccount < Lucky::Action
       if PAID_PLANS.includes?(plan)
         proto = request.headers["X-Forwarded-Proto"]? || "https"
         host  = request.headers["Host"]
-        success_url = "#{proto}://#{host}/payment/success?session_id={CHECKOUT_SESSION_ID}"
+        success_url = "#{proto}://#{host}/payment-success?session_id={CHECKOUT_SESSION_ID}"
         cancel_url  = "#{proto}://#{host}/register"
         checkout_url = daemon.create_checkout_session(account.customer_name, plan, success_url, cancel_url)
         redirect to: checkout_url

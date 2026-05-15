@@ -6,6 +6,7 @@ abstract class PortalLayout
 
   needs email : String
   needs company : String
+  needs flash : Lucky::FlashStore
 
   def render
     html_doctype
@@ -51,6 +52,16 @@ abstract class PortalLayout
               h1 page_title, class: "page-title"
             end
             div class: "main-content" do
+              if flash.success?
+                div class: "flash flash-success" do
+                  text flash.success
+                end
+              end
+              if flash.failure?
+                div class: "flash flash-failure" do
+                  text flash.failure
+                end
+              end
               content
             end
           end
@@ -221,6 +232,25 @@ abstract class PortalLayout
 
     .main-content {
       padding: 2rem;
+    }
+
+    .flash {
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+
+    .flash-success {
+      background: rgba(63, 185, 80, 0.15);
+      border: 1px solid var(--accent2);
+      color: var(--accent2);
+    }
+
+    .flash-failure {
+      background: rgba(248, 81, 73, 0.15);
+      border: 1px solid var(--danger);
+      color: var(--danger);
     }
     CSS
   end
