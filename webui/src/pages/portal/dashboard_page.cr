@@ -74,35 +74,31 @@ class Portal::DashboardPage < PortalLayout
     else
       # Provisioned state
 
-      # Compute aggregate stats from node statuses
-      total_tenants  = 0
-      total_users    = 0
-      total_agents   = 0
-      last_checked   = ""
-      ok_nodes       = 0
-      max_lag        = nil.as(Int32?)
+      # Compute aggregate stats from node statuses.
+      # Agents are deduplicated by agent_id across backend nodes so the same
+      # enrolled machine isn't counted twice (it may appear on primary + replica).
+      total_users      = 0
+      ok_nodes         = 0
+      seen_agent_ids   = Set(String).new
 
       if cs = @customer_status
         cs.nodes.each do |n|
-          total_tenants  += n.tenant_count || 0
-          total_users    += n.user_count   || 0
-          total_agents   += n.active_agents || 0
-          ok_nodes       += 1 if n.status == "up"
-          if last_checked.empty? && n.checked_at
-            last_checked = n.checked_at.not_nil!
-          end
-          if (lag = n.replication_lag_seconds)
-            max_lag = lag if max_lag.nil? || lag > max_lag.not_nil!
+          total_users += n.user_count || 0
+          ok_nodes    += 1 if n.status == "up"
+          (n.agents || [] of Dirless::Ops::WebUI::AgentInfo).each do |agent|
+            if (id = agent.agent_id)
+              seen_agent_ids << id
+            end
           end
         end
       end
 
-      node_count = @customer_status.try(&.nodes.size) || 0
+      enrolled_count = seen_agent_ids.size
 
       div class: "stats-grid" do
         div class: "stat-card" do
           div class: "stat-value" do
-            text node_count.to_s
+            text enrolled_count.to_s
           end
           div class: "stat-label" do
             text "Enrolled nodes"
@@ -114,14 +110,6 @@ class Portal::DashboardPage < PortalLayout
           end
           div class: "stat-label" do
             text "Synced users"
-          end
-        end
-        div class: "stat-card" do
-          div class: "stat-value" do
-            text total_agents.to_s
-          end
-          div class: "stat-label" do
-            text "Active agents"
           end
         end
       end
