@@ -61,6 +61,19 @@ module Dirless
                 nil
               end
 
+              syncthing_completion, syncthing_need_bytes = begin
+                if (sj = node.syncthing_status_json)
+                  parsed = JSON.parse(sj)
+                  pct = parsed["completion"]?.try(&.as_f?).try { |f| f.round.to_i }
+                  need = parsed["needBytes"]?.try(&.as_i64?) || parsed["needBytes"]?.try(&.as_i?).try(&.to_i64)
+                  {pct, need}
+                else
+                  {nil, nil}
+                end
+              rescue
+                {nil, nil}
+              end
+
               {
                 "node_id"                => node.id,
                 "node_name"              => node.name,
@@ -79,6 +92,8 @@ module Dirless
                 "error"                  => latest.try(&.error),
                 "checked_at"             => latest.try(&.checked_at.try(&.to_rfc3339)),
                 "service_state"          => service_state,
+                "syncthing_completion"   => syncthing_completion,
+                "syncthing_need_bytes"   => syncthing_need_bytes,
               }
             end
 

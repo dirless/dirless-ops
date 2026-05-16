@@ -66,6 +66,22 @@ module Dirless
         queue(email, "Your Dirless account has been deleted", body)
       end
 
+      def probe_failing(node_name : String, node_ip : String, error : String, count : Int32)
+        to = @ops_alert_email
+        return unless to
+        body = <<-BODY
+        Node probe has failed #{count} consecutive times.
+
+        Node:  #{node_name}
+        IP:    #{node_ip}
+        Error: #{error}
+        Time:  #{Time.utc.to_rfc3339}
+
+        — Dirless node prober
+        BODY
+        queue(to, "Node probe failing: #{node_name} (#{count} consecutive failures)", body)
+      end
+
       def node_down(node_name : String, node_ip : String, error : String)
         to = @ops_alert_email
         return unless to

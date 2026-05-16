@@ -56,6 +56,7 @@ class Customers::ShowPage < MainLayout
               th "Users", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Active Agents", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Replication Lag", class: "px-6 py-3 text-left font-medium text-gray-500"
+              th "Sync", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Latency", class: "px-6 py-3 text-left font-medium text-gray-500"
               th "Last Checked", class: "px-6 py-3 text-left font-medium text-gray-500"
             end
@@ -89,6 +90,9 @@ class Customers::ShowPage < MainLayout
                 end
                 td class: "px-6 py-3" do
                   lag_badge(node)
+                end
+                td class: "px-6 py-3" do
+                  syncthing_badge(node)
                 end
                 td node.response_time_ms.try { |ms| "#{ms}ms" } || "-", class: "px-6 py-3 text-gray-500"
                 td node.checked_at || "never", class: "px-6 py-3 text-gray-400 text-xs"
@@ -200,8 +204,22 @@ class Customers::ShowPage < MainLayout
     up_nodes = nodes.select { |n| n.status == "up" }
     return if up_nodes.size < 2
 
-    max_lag = up_nodes.compact_map(&.replication_lag_seconds).max?
+    replica_nodes = up_nodes.reject(&.is_primary)
 
+    # Prefer Syncthing completion if available
+    completions = replica_nodes.compact_map(&.syncthing_completion)
+    if completions.any?
+      min_completion = completions.min
+      if min_completion == 100
+        span "In sync", class: "text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700"
+      else
+        span "Syncing #{min_completion}%", class: "text-xs font-medium px-2 py-0.5 rounded bg-yellow-100 text-yellow-700"
+      end
+      return
+    end
+
+    # Fall back to replication lag
+    max_lag = up_nodes.compact_map(&.replication_lag_seconds).max?
     if max_lag
       if max_lag <= 120
         span "In sync", class: "text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700"
@@ -218,6 +236,36 @@ class Customers::ShowPage < MainLayout
       else
         span "Out of sync", class: "text-xs font-medium px-2 py-0.5 rounded bg-red-100 text-red-700"
       end
+    end
+  end
+
+  private def syncthing_badge(node : Dirless::Ops::WebUI::NodeStatusResponse)
+    if node.is_primary
+      span "source", class: "text-xs text-gray-400"
+    elsif (pct = node.syncthing_completion)
+      if pct == 100
+        span "100%", class: "px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
+      elsif pct >= 80
+        span "#{pct}%", class: "px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800"
+      else
+        need = node.syncthing_need_bytes
+        label = need && need > 0 ? "#{pct}% (#{format_bytes(need)} pending)" : "#{pct}%"
+        span label, class: "px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800"
+      end
+    else
+      span "-", class: "text-gray-400"
+    end
+  end
+
+  private def format_bytes(bytes : Int64) : String
+    if bytes < 1024
+      "#{bytes}B"
+    elsif bytes < 1024 * 1024
+      "#{bytes // 1024}KB"
+    elsif bytes < 1024 * 1024 * 1024
+      "#{bytes // (1024 * 1024)}MB"
+    else
+      "#{bytes // (1024 * 1024 * 1024)}GB"
     end
   end
 

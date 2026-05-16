@@ -170,7 +170,7 @@ HTML
                   th "Region"
                   th "Node"
                   th "Status"
-                  th "Replication Lag"
+                  th "Sync"
                   th "Response"
                   th "Last Checked"
                 end
@@ -195,6 +195,12 @@ HTML
                     td do
                       if node.is_primary
                         span "primary", class: "badge badge-muted"
+                      elsif (pct = node.syncthing_completion)
+                        if pct == 100
+                          span "In sync", class: "badge badge-ok"
+                        else
+                          span "Syncing #{pct}%", class: "badge badge-muted"
+                        end
                       elsif (lag = node.replication_lag_seconds)
                         lag_class = lag <= 120 ? "badge badge-ok" : "badge badge-error"
                         span format_lag(lag), class: lag_class
