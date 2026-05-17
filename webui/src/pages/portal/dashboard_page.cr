@@ -171,8 +171,7 @@ HTML
         end
         div class: "terminal-body" do
           raw <<-HTML
-<pre><span class="c-comment"># Run on an EC2 instance with an IAM role granting identitystore:List*</span>
-<span class="c-comment"># The host must be enrolled first — dirless-cli enroll provisions the mTLS certs the syncer uses to authenticate</span>
+<pre><span class="c-comment"># Requires an EC2 instance with an IAM role granting identitystore:List*</span>
 
 <span class="c-comment"># option 1 — RPM (RHEL / Amazon Linux 2023)</span>
 <span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://dirless.com/rpm/dirless.repo</span> \\
@@ -184,10 +183,11 @@ HTML
   <span class="c-flag">-o</span> /usr/local/bin/dirless-syncer
 <span class="c-cmd">chmod</span> <span class="c-val">+x</span> /usr/local/bin/dirless-syncer
 
-<span class="c-comment"># write config</span>
+<span class="c-comment"># write config — the syncer self-enrolls on first start using the token below</span>
 <span class="c-cmd">cat</span> &gt; /etc/dirless/dirless-syncer.toml &lt;&lt; <span class="c-val">'EOF'</span>
 [backend]
-url = "<span class="c-val">https://#{subdomain}</span>"
+url              = "<span class="c-val">https://#{subdomain}</span>"
+enrollment_token = "<span class="c-val">#{hmac_secret}</span>"
 
 [identity_center]
 identity_store_id = "<span class="c-val">d-xxxxxxxxxx</span>"   <span class="c-comment"># AWS Console → IAM Identity Center → Settings</span>
@@ -198,7 +198,7 @@ id               = "<span class="c-val">syncer-01</span>"
 interval_seconds = 300
 <span class="c-val">EOF</span>
 
-<span class="c-comment"># start the syncer</span>
+<span class="c-comment"># start the syncer — it enrolls itself, then begins syncing</span>
 <span class="c-cmd">systemctl enable</span> <span class="c-flag">--now</span> <span class="c-val">dirless-syncer</span></pre>
 HTML
         end
