@@ -189,9 +189,9 @@ HTML
 url              = "<span class="c-val">https://#{subdomain}</span>"
 enrollment_token = "<span class="c-val">#{hmac_secret}</span>"
 
-[identity_center]
-identity_store_id = "<span class="c-val">d-xxxxxxxxxx</span>"   <span class="c-comment"># AWS Console → IAM Identity Center → Settings</span>
-region            = "<span class="c-val">us-east-1</span>"
+<span class="c-comment"># [identity_center]                                      # normally auto-detected</span>
+<span class="c-comment"># identity_store_id = "d-xxxxxxxxxx"                   # override if auto-detect fails</span>
+<span class="c-comment"># region            = "us-east-1"                      # override if auto-detect fails</span>
 
 [syncer]
 id               = "<span class="c-val">syncer-01</span>"
