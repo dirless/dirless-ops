@@ -171,7 +171,8 @@ HTML
         end
         div class: "terminal-body" do
           raw <<-HTML
-<pre><span class="c-comment"># Prerequisites: EC2 instance with an IAM role granting identitystore:List* and an enrolled node</span>
+<pre><span class="c-comment"># Run on an EC2 instance with an IAM role granting identitystore:List*</span>
+<span class="c-comment"># The host must be enrolled first — dirless-cli enroll provisions the mTLS certs the syncer uses to authenticate</span>
 
 <span class="c-comment"># option 1 — RPM (RHEL / Amazon Linux 2023)</span>
 <span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://dirless.com/rpm/dirless.repo</span> \\
