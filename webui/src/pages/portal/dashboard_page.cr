@@ -194,7 +194,7 @@ enrollment_token = "<span class="c-val">#{hmac_secret}</span>"
 <span class="c-comment"># region            = "us-east-1"                      # override if auto-detect fails</span>
 
 [syncer]
-id               = "<span class="c-val">syncer-01</span>"
+<span class="c-comment"># id = "syncer-01"                                      # normally auto-detected from EC2 instance ID</span>
 interval_seconds = 300
 <span class="c-val">EOF</span>
 
