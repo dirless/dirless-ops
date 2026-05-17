@@ -157,9 +157,9 @@ HTML
         end
       end
 
-      # Syncer instructions
+      # Syncer — install
       div class: "section-heading" do
-        text "Add a syncer"
+        text "Install the syncer"
       end
 
       div class: "terminal-box" do
@@ -167,11 +167,11 @@ HTML
           span class: "dot dot-r"
           span class: "dot dot-y"
           span class: "dot dot-g"
-          span "Sync IAM Identity Center users", class: "terminal-title"
+          span "Install dirless-syncer", class: "terminal-title"
         end
         div class: "terminal-body" do
           raw <<-HTML
-<pre><span class="c-comment"># Requires an EC2 instance with an IAM role granting identitystore:List*</span>
+<pre><span class="c-comment"># Requires an EC2 instance with an IAM role granting identitystore:List* and sso:ListInstances</span>
 
 <span class="c-comment"># option 1 — RPM (RHEL / Amazon Linux 2023)</span>
 <span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://dirless.com/rpm/dirless.repo</span> \\
@@ -181,9 +181,26 @@ HTML
 <span class="c-comment"># option 2 — direct binary (Linux x86_64)</span>
 <span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://github.com/dirless/dirless-syncer/releases/latest/download/dirless-syncer-x86_64</span> \\
   <span class="c-flag">-o</span> /usr/local/bin/dirless-syncer
-<span class="c-cmd">chmod</span> <span class="c-val">+x</span> /usr/local/bin/dirless-syncer
+<span class="c-cmd">chmod</span> <span class="c-val">+x</span> /usr/local/bin/dirless-syncer</pre>
+HTML
+        end
+      end
 
-<span class="c-comment"># write config — the syncer self-enrolls on first start using the token below</span>
+      # Syncer — configure
+      div class: "section-heading" do
+        text "Configure and start the syncer"
+      end
+
+      div class: "terminal-box" do
+        div class: "terminal-bar" do
+          span class: "dot dot-r"
+          span class: "dot dot-y"
+          span class: "dot dot-g"
+          span "Configure dirless-syncer", class: "terminal-title"
+        end
+        div class: "terminal-body" do
+          raw <<-HTML
+<pre><span class="c-comment"># write config — the syncer self-enrolls on first start using the token below</span>
 <span class="c-cmd">cat</span> &gt; /etc/dirless/dirless-syncer.toml &lt;&lt; <span class="c-val">'EOF'</span>
 [backend]
 url              = "<span class="c-val">https://#{subdomain}</span>"
