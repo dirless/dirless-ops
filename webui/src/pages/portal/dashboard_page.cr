@@ -157,6 +157,52 @@ HTML
         end
       end
 
+      # Syncer instructions
+      div class: "section-heading" do
+        text "Add a syncer"
+      end
+
+      div class: "terminal-box" do
+        div class: "terminal-bar" do
+          span class: "dot dot-r"
+          span class: "dot dot-y"
+          span class: "dot dot-g"
+          span "Sync IAM Identity Center users", class: "terminal-title"
+        end
+        div class: "terminal-body" do
+          raw <<-HTML
+<pre><span class="c-comment"># Prerequisites: EC2 instance with an IAM role granting identitystore:List* and an enrolled node</span>
+
+<span class="c-comment"># option 1 — RPM (RHEL / Amazon Linux 2023)</span>
+<span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://dirless.com/rpm/dirless.repo</span> \\
+  <span class="c-flag">-o</span> /etc/yum.repos.d/dirless.repo
+<span class="c-cmd">dnf install</span> <span class="c-val">-y dirless-syncer</span>
+
+<span class="c-comment"># option 2 — direct binary (Linux x86_64)</span>
+<span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://github.com/dirless/dirless-syncer/releases/latest/download/dirless-syncer-x86_64</span> \\
+  <span class="c-flag">-o</span> /usr/local/bin/dirless-syncer
+<span class="c-cmd">chmod</span> <span class="c-val">+x</span> /usr/local/bin/dirless-syncer
+
+<span class="c-comment"># write config</span>
+<span class="c-cmd">cat</span> &gt; /etc/dirless/dirless-syncer.toml &lt;&lt; <span class="c-val">'EOF'</span>
+[backend]
+url = "<span class="c-val">https://#{subdomain}</span>"
+
+[identity_center]
+identity_store_id = "<span class="c-val">d-xxxxxxxxxx</span>"   <span class="c-comment"># AWS Console → IAM Identity Center → Settings</span>
+region            = "<span class="c-val">us-east-1</span>"
+
+[syncer]
+id               = "<span class="c-val">syncer-01</span>"
+interval_seconds = 300
+<span class="c-val">EOF</span>
+
+<span class="c-comment"># start the syncer</span>
+<span class="c-cmd">systemctl enable</span> <span class="c-flag">--now</span> <span class="c-val">dirless-syncer</span></pre>
+HTML
+        end
+      end
+
       # Nodes table
       if cs = @customer_status
         unless cs.nodes.empty?
