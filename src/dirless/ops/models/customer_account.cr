@@ -1,5 +1,5 @@
 require "granite"
-require "granite/adapter/sqlite"
+
 require "crypto/bcrypt/password"
 
 module Dirless

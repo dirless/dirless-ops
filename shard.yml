@@ -19,9 +19,8 @@ dependencies:
     github: amberframework/granite
     version: "~> 0.23.0"
 
-  sqlite3:
-    github: crystal-lang/crystal-sqlite3
-    version: "~> 0.21.0"
+  trash-panda-db:
+    path: ../trash-panda-db
 
   toml:
     github: crystal-community/toml.cr

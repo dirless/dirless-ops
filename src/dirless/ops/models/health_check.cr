@@ -1,5 +1,5 @@
 require "granite"
-require "granite/adapter/sqlite"
+
 
 module Dirless
   module Ops

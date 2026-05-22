@@ -1,5 +1,4 @@
-require "granite/adapter/sqlite"
-require "sqlite3"
+require "./granite_adapter_trashpanda"
 
 module Dirless
   module Ops
@@ -100,9 +99,9 @@ module Dirless
     def self.setup_db(database_path : String)
       Dir.mkdir_p(File.dirname(database_path))
 
-      Granite::Connections << Granite::Adapter::Sqlite.new(
+      Granite::Connections << Granite::Adapter::Trashpanda.new(
         name: "sqlite",
-        url: "sqlite3://#{database_path}"
+        url: "trashpanda:#{database_path}"
       )
 
       db = Granite::Connections["sqlite"].not_nil![:writer].database
