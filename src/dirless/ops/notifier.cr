@@ -82,6 +82,25 @@ module Dirless
         queue(email, "Your Dirless account has been deleted", body)
       end
 
+      def registration_error(email : String, ex : Exception)
+        to = @ops_alert_email
+        return unless to
+        backtrace = ex.backtrace?.try(&.first(8).join("\n")) || "(no backtrace)"
+        body = <<-BODY
+        A registration attempt failed with an unhandled exception.
+
+        Email:    #{email}
+        Error:    #{ex.class}: #{ex.message}
+        Time:     #{Time.utc.to_rfc3339}
+
+        Backtrace:
+        #{backtrace}
+
+        — Dirless ops daemon
+        BODY
+        queue(to, "⚠️ Registration error for #{email}", body)
+      end
+
       def probe_failing(node_name : String, node_ip : String, error : String, count : Int32)
         to = @ops_alert_email
         return unless to
