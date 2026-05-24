@@ -10,6 +10,7 @@ class Portal::DashboardPage < PortalLayout
 
   def content
     raw "<style>#{extra_css}</style>"
+    raw "<script>#{extra_js}</script>"
 
     subdomain = "#{@customer_name}.dirless.com"
     hmac_secret = @customer_info.try(&.hmac_secret) || ""
@@ -33,14 +34,12 @@ class Portal::DashboardPage < PortalLayout
         div class: "info-label" do
           text "Enrollment token"
         end
-        details class: "token-details" do
-          summary class: "token-summary" do
-            span "••••••••••••••••", class: "token-masked"
-            span "Reveal", class: "token-reveal-label"
-          end
-          div class: "code-box token-value" do
-            text hmac_secret.empty? ? "(not yet available)" : hmac_secret
-          end
+        div class: "token-summary", onclick: "toggleToken(this)", style: "cursor:pointer" do
+          span "••••••••••••••••", class: "token-masked"
+          span hmac_secret.empty? ? "(not yet available)" : hmac_secret,
+            class: "token-value-inline code-box",
+            style: "display:none;flex:1;margin:0;padding:0;background:none;border:none;"
+          span "Reveal", class: "token-reveal-label"
         end
       end
 
@@ -395,12 +394,6 @@ HTML
       word-break: break-all;
     }
 
-    .token-details {
-      background: transparent;
-      border: none;
-      padding: 0;
-    }
-
     .token-summary {
       display: flex;
       align-items: center;
@@ -416,8 +409,6 @@ HTML
       color: var(--text-dim);
     }
 
-    .token-summary::-webkit-details-marker { display: none; }
-
     .token-masked {
       flex: 1;
       letter-spacing: 0.15em;
@@ -430,12 +421,6 @@ HTML
       color: var(--accent);
       font-weight: 600;
       flex-shrink: 0;
-    }
-
-    .token-value {
-      margin-top: 0.4rem;
-      border-top-left-radius: 6px;
-      border-top-right-radius: 6px;
     }
 
     .section-heading {
@@ -574,5 +559,24 @@ HTML
       border: 1px solid rgba(88, 166, 255, 0.25);
     }
     CSS
+  end
+
+  private def extra_js : String
+    <<-JS
+    function toggleToken(el) {
+      var masked = el.querySelector('.token-masked');
+      var value  = el.querySelector('.token-value-inline');
+      var label  = el.querySelector('.token-reveal-label');
+      if (masked.style.display === 'none') {
+        masked.style.display = '';
+        value.style.display  = 'none';
+        label.textContent    = 'Reveal';
+      } else {
+        masked.style.display = 'none';
+        value.style.display  = '';
+        label.textContent    = 'Hide';
+      }
+    }
+    JS
   end
 end

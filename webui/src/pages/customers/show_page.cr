@@ -28,13 +28,10 @@ class Customers::ShowPage < MainLayout
       field_row("Label", customer.label || "-")
       field_row("Port", customer.port.to_s)
       field_row("AWS Account ID", customer.aws_account_id || "-")
-      field_row("HMAC Secret", customer.hmac_secret, mono: true, sensitive: true)
       field_row("Notes", customer.notes || "-")
       field_row("Created", customer.created_at || "-")
       field_row("Updated", customer.updated_at || "-")
     end
-
-    provisioning_steps
 
     div class: "flex items-center gap-3 mb-3" do
       h2 "Servers", class: "text-lg font-semibold text-gray-900"
@@ -127,63 +124,6 @@ class Customers::ShowPage < MainLayout
                 td agent.hostname || "-", class: "px-6 py-3 text-gray-600"
                 td agent.last_seen_at || "-", class: "px-6 py-3 text-gray-400 text-xs"
               end
-            end
-          end
-        end
-      end
-    end
-  end
-
-  private def provisioning_steps
-    customers_yml = <<-YAML
-    - name: #{customer.name}
-      hmac_secret: "#{customer.hmac_secret}"
-    YAML
-
-    provision_cmd = "ansible-playbook -i ansible/inventory/atlanticnet_hosts.yml \\\n  ansible/provision-customers.yml \\\n  -e '@ansible/customers.yml'"
-
-    enroll_cmd = "dirless-cli enroll \\\n  --server https://#{customer.name}.dirless.com \\\n  --token #{customer.hmac_secret}"
-
-    steps = [
-      {
-        num:   "1",
-        title: "Add to customers.yml",
-        desc:  "Append this entry to <code>ansible/customers.yml</code>:",
-        code:  customers_yml,
-        lang:  "yaml",
-      },
-      {
-        num:   "2",
-        title: "Provision backend nodes",
-        desc:  "Run the provisioning playbook from <code>dirless-infra/</code>:",
-        code:  provision_cmd,
-        lang:  "bash",
-      },
-      {
-        num:   "3",
-        title: "Enroll a node",
-        desc:  "Run this on each machine belonging to this customer that should use Dirless for identity lookups:",
-        code:  enroll_cmd,
-        lang:  "bash",
-      },
-    ]
-
-    div class: "mb-8" do
-      div class: "flex items-center justify-between mb-3" do
-        h2 "Provisioning", class: "text-lg font-semibold text-gray-900"
-      end
-      div class: "bg-gray-950 rounded-lg border border-gray-800 divide-y divide-gray-800" do
-        steps.each do |step|
-          div class: "p-5" do
-            div class: "flex gap-3 mb-2" do
-              span step[:num], class: "flex-none w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center"
-              span step[:title], class: "text-sm font-semibold text-gray-100"
-            end
-            para class: "text-xs text-gray-400 mb-2 ml-9" do
-              raw step[:desc]
-            end
-            pre class: "ml-9 bg-gray-900 rounded px-4 py-3 text-xs text-green-300 font-mono overflow-x-auto whitespace-pre" do
-              text step[:code]
             end
           end
         end
