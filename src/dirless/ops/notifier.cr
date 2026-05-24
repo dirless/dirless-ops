@@ -14,8 +14,11 @@ module Dirless
         body = <<-BODY
         Hi there,
 
-        Thank you for signing up for Dirless! We're provisioning your
-        environment and will email you once it's ready.
+        Thank you for signing up for Dirless!
+
+        We've sent a separate email to verify your address. Your environment
+        will be provisioned as soon as you confirm — just click the
+        verification link.
 
         If you have any questions, just reply to this email.
 
