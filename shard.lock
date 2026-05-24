@@ -37,6 +37,6 @@ shards:
     version: 0.8.1
 
   trash-panda-db:
-    path: ../trash-panda-db
+    git: https://github.com/dirless/trash-panda-db.git
     version: 0.8.0
 

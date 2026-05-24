@@ -51,17 +51,12 @@ module Dirless
           begin
             db.exec("BEGIN IMMEDIATE")
 
-            # Atomic port allocation: read all existing names inside the
-            # transaction and compute MAX port in Crystal.
-            # INSTR/SUBSTR are not implemented in TPDB, so we avoid SQL
-            # string functions here. BEGIN IMMEDIATE holds the write lock
-            # so two concurrent registrations cannot pick the same port.
+            # Atomic port allocation: SELECT MAX inside the transaction
+            # prevents two concurrent registrations from getting the same port.
+            # BEGIN IMMEDIATE acquires a write lock immediately.
             random_part = Array.new(12) { ALPHA.sample }.join
-            existing_names = db.query_all("SELECT name FROM customers", as: String)
-            next_port = existing_names.compact_map { |n|
-              dash = n.rindex('-')
-              dash ? n[(dash + 1)..].to_i? : nil
-            }.select { |p| p >= 5000 }.max?.try { |m| m + 1 } || 5000
+            max_port_result = db.scalar("SELECT MAX(CAST(SUBSTR(name, INSTR(name, '-') + 1) AS INTEGER)) FROM customers WHERE CAST(SUBSTR(name, INSTR(name, '-') + 1) AS INTEGER) >= 5000")
+            next_port = max_port_result.is_a?(Int64) ? max_port_result.to_i + 1 : 5000
             customer_name = "#{random_part}-#{next_port}"
 
             hmac_secret = Random::Secure.hex(32)
