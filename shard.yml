@@ -21,7 +21,7 @@ dependencies:
 
   trash-panda-db:
     github: dirless/trash-panda-db
-    version: "~> 0.8.0"
+    version: "~> 0.8.1"
 
   toml:
     github: crystal-community/toml.cr
