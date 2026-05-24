@@ -51,7 +51,10 @@ module Dirless
           db = Granite::Connections["sqlite"].not_nil![:writer].database
 
           row = db.query_one?(
-            "SELECT id FROM provision_jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1",
+            "SELECT pj.id FROM provision_jobs pj
+             JOIN customer_accounts ca ON ca.customer_name = pj.customer_name
+             WHERE pj.status = 'pending' AND ca.email_verified = 1
+             ORDER BY pj.created_at ASC LIMIT 1",
             as: Int64,
           )
           return nil unless row

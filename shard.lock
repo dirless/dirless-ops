@@ -14,7 +14,7 @@ shards:
 
   dirless-http:
     git: https://github.com/dirless/dirless-http.git
-    version: 0.1.0+git.commit.4247a1e73039287cc43df2c26abd9dd59f40da3d
+    version: 0.1.0+git.commit.0af3bd572b1f184aeef9e003a4bc97339577901e
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
@@ -38,5 +38,5 @@ shards:
 
   trash-panda-db:
     path: ../trash-panda-db
-    version: 0.6.0
+    version: 0.8.0
 

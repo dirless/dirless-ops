@@ -17,6 +17,8 @@ module Dirless
       column company : String?
       column country : String?
       column provisioned : Bool
+      column email_verified : Bool
+      column email_verify_token : String?
       column stripe_customer_id : String?
       column beta_customer : Bool
       column plan : String?
@@ -41,9 +43,10 @@ module Dirless
           "last_name"     => last_name,
           "company"       => company,
           "country"       => country,
-          "provisioned"   => provisioned,
-          "plan"          => (plan || "beta"),
-          "created_at"    => created_at.try(&.to_rfc3339),
+          "provisioned"    => provisioned,
+          "email_verified" => email_verified,
+          "plan"           => (plan || "beta"),
+          "created_at"     => created_at.try(&.to_rfc3339),
         }
       end
     end

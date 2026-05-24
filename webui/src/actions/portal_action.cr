@@ -29,6 +29,10 @@ abstract class PortalAction < Lucky::Action
     session.get?(:portal_provisioned) == "true"
   end
 
+  private def portal_email_verified : Bool
+    session.get?(:portal_email_verified) == "true"
+  end
+
   private def daemon : Dirless::Ops::WebUI::DaemonClient
     Dirless::Ops::WebUI::DaemonClient.new
   end

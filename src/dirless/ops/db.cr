@@ -94,6 +94,11 @@ module Dirless
       "ALTER TABLE nodes ADD COLUMN syncthing_status_json TEXT",
       # Migration: consecutive probe failure counter for alerting
       "ALTER TABLE nodes ADD COLUMN probe_failure_count INTEGER NOT NULL DEFAULT 0",
+      # Migration: email verification
+      # DEFAULT 1 so that all existing accounts are automatically considered verified.
+      # New registrations set email_verified = 0 explicitly and go through the flow.
+      "ALTER TABLE customer_accounts ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1",
+      "ALTER TABLE customer_accounts ADD COLUMN email_verify_token TEXT",
     ]
 
     def self.setup_db(database_path : String)

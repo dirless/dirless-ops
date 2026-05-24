@@ -37,6 +37,7 @@ class Portal::Dashboard < PortalAction
       company: portal_company,
       customer_name: portal_customer_name,
       provisioned: provisioned,
+      email_verified: portal_email_verified,
       customer_info: customer_info,
       customer_status: customer_status
   end

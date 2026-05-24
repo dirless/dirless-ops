@@ -72,6 +72,8 @@ module Dirless
               return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
             end
 
+            verify_token = Random::Secure.hex(32)
+
             account = CustomerAccount.new(
               email: email,
               password_hash: CustomerAccount.hash_password(password),
@@ -81,6 +83,8 @@ module Dirless
               company: company,
               country: country,
               provisioned: false,
+              email_verified: false,
+              email_verify_token: verify_token,
               beta_customer: false,
             )
 
@@ -95,6 +99,7 @@ module Dirless
 
             db.exec("COMMIT")
             Ops.notifier.welcome(email, company, customer_name)
+            Ops.notifier.verify_email(email, verify_token)
           rescue ex
             db.exec("ROLLBACK") rescue nil
             return context.put_status(503).json({"error" => "Service temporarily unavailable, please try again"}).halt
@@ -202,6 +207,62 @@ module Dirless
           account.save
 
           context.put_status(200).json(account.to_response).halt
+        end
+      end
+
+      class PortalVerifyEmail
+        include Grip::Controllers::HTTP
+
+        def get(context : Context) : Context
+          token = context.request.query_params["token"]?.to_s.strip
+          return context.put_status(400).json({"error" => "missing token"}).halt if token.empty?
+
+          account = CustomerAccount.find_by(email_verify_token: token)
+          return context.put_status(404).json({"error" => "invalid or expired token"}).halt unless account
+
+          account.email_verified = true
+          account.email_verify_token = nil
+          unless account.save
+            return context.put_status(422).json({"error" => "could not verify email"}).halt
+          end
+
+          context.put_status(200).json(account.to_response).halt
+        end
+      end
+
+      class PortalResendVerification
+        include Grip::Controllers::HTTP
+
+        RESEND_COOLDOWN = 60.seconds
+
+        def post(context : Context) : Context
+          body = context.request.body.try(&.gets_to_end) || ""
+          begin
+            parsed = JSON.parse(body)
+          rescue ex : JSON::ParseException
+            return context.put_status(400).json({"error" => "malformed JSON"}).halt
+          end
+
+          customer_name = parsed["customer_name"]?.try(&.as_s).to_s.strip
+          return context.put_status(400).json({"error" => "customer_name required"}).halt if customer_name.empty?
+
+          account = CustomerAccount.find_by(customer_name: customer_name)
+          return context.put_status(404).json({"error" => "account not found"}).halt unless account
+          return context.put_status(200).json({"ok" => true, "message" => "already verified"}).halt if account.email_verified
+
+          # Rate limit: don't resend if updated recently
+          if (updated = account.updated_at)
+            if Time.utc - updated < RESEND_COOLDOWN
+              return context.put_status(429).json({"error" => "please wait before requesting another verification email"}).halt
+            end
+          end
+
+          token = Random::Secure.hex(32)
+          account.email_verify_token = token
+          account.save
+          Ops.notifier.verify_email(account.email, token)
+
+          context.put_status(200).json({"ok" => true}).halt
         end
       end
 

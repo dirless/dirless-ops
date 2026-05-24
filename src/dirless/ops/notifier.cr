@@ -24,6 +24,22 @@ module Dirless
         queue(email, "Welcome to Dirless", body)
       end
 
+      def verify_email(email : String, token : String)
+        link = "https://portal.dirless.com/verify-email?token=#{token}"
+        body = <<-BODY
+        Hi there,
+
+        Please verify your email address by clicking the link below:
+
+          #{link}
+
+        If you didn't create a Dirless account, you can safely ignore this email.
+
+        — The Dirless team
+        BODY
+        queue(email, "Verify your Dirless email address", body)
+      end
+
       def environment_ready(email : String, company : String, customer_name : String)
         body = <<-BODY
         Hi there,

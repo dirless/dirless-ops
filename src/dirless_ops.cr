@@ -129,6 +129,8 @@ module Dirless
             post "/login", Controllers::PortalLogin
             post "/checkout", Controllers::PortalCreateCheckout
             get "/checkout/:session_id", Controllers::PortalVerifyCheckout
+            get "/verify-email", Controllers::PortalVerifyEmail
+            post "/resend-verification", Controllers::PortalResendVerification
           end
 
           scope "/provision-jobs" do

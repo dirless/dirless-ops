@@ -1,6 +1,7 @@
 class Portal::DashboardPage < PortalLayout
   needs customer_name : String
   needs provisioned : Bool
+  needs email_verified : Bool
   needs customer_info : Dirless::Ops::WebUI::CustomerResponse?
   needs customer_status : Dirless::Ops::WebUI::CustomerStatusResponse?
 
@@ -14,6 +15,17 @@ class Portal::DashboardPage < PortalLayout
 
     subdomain = "#{@customer_name}.dirless.com"
     hmac_secret = @customer_info.try(&.hmac_secret) || ""
+
+    unless @email_verified
+      div class: "banner banner-warn" do
+        text "📧 Please verify your email address. Check your inbox for a link from info@dirless.com. "
+        form action: "/resend-verification", method: "post", style: "display:inline" do
+          button type: "submit", style: "background:none;border:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0;font:inherit;" do
+            text "Resend →"
+          end
+        end
+      end
+    end
 
     unless @provisioned
       # Pending provisioning state

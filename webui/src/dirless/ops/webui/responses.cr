@@ -102,6 +102,7 @@ module Dirless
         property company : String?
         property country : String?
         property provisioned : Bool
+        property email_verified : Bool
         property plan : String
         property created_at : String?
       end

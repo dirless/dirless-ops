@@ -46,6 +46,7 @@ class Portal::CreateAccount < Lucky::Action
         session.set(:portal_customer_name, account.customer_name)
         session.set(:portal_company, account.company || "")
         session.set(:portal_provisioned, account.provisioned.to_s)
+        session.set(:portal_email_verified, account.email_verified.to_s)
         redirect to: Portal::Dashboard
       end
     rescue ex : Dirless::Ops::WebUI::DaemonClient::Error

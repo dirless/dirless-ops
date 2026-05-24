@@ -91,6 +91,14 @@ module Dirless
           PortalAccountResponse.from_json(get("/v1/portal/checkout/#{session_id}"))
         end
 
+        def verify_email(token : String) : PortalAccountResponse
+          PortalAccountResponse.from_json(get("/v1/portal/verify-email?token=#{URI.encode_path(token)}"))
+        end
+
+        def resend_verification(customer_name : String) : Nil
+          post("/v1/portal/resend-verification", {"customer_name" => customer_name})
+        end
+
         private def get(path : String) : String
           response = HTTP::Client.get("#{@url}#{path}", headers: auth_headers)
           check!(response)
