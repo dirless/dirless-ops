@@ -83,6 +83,15 @@ module Dirless
       # Migration: agent heartbeat tracking
       "ALTER TABLE health_checks ADD COLUMN active_agents INTEGER",
       "ALTER TABLE health_checks ADD COLUMN agents_json TEXT",
+      # Migration: node prober resource columns (cpu, memory, disk, load, probe timestamp)
+      # NOTE: these were applied directly to ops.db before being captured in code.
+      "ALTER TABLE nodes ADD COLUMN cpu_count INTEGER",
+      "ALTER TABLE nodes ADD COLUMN memory_gb INTEGER",
+      "ALTER TABLE nodes ADD COLUMN free_memory_mb INTEGER",
+      "ALTER TABLE nodes ADD COLUMN free_disk_gb INTEGER",
+      "ALTER TABLE nodes ADD COLUMN load_5m REAL",
+      "ALTER TABLE nodes ADD COLUMN last_probed_at DATETIME",
+      "ALTER TABLE nodes ADD COLUMN probe_error TEXT",
       # Migration: per-node backend service states from node prober
       "ALTER TABLE nodes ADD COLUMN services_json TEXT",
       # Migration: Stripe integration
