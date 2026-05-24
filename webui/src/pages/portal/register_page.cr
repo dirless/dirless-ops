@@ -146,7 +146,7 @@ class Portal::RegisterPage
                 div class: "plan-grid" do
                   selected_plan = @values["plan"]? || "beta"
                   [
-                    {value: "beta",    label: "Beta",    price: "Free",          sub: "Up to 3 servers"},
+                    {value: "beta",    label: "Free",    price: "Free",          sub: "Up to 3 servers"},
                     {value: "starter", label: "Starter", price: "$24.50/mo",     sub: "Up to 10 servers"},
                     {value: "growth",  label: "Growth",  price: "$99.50/mo",     sub: "Up to 50 servers"},
                     {value: "scale",   label: "Scale",   price: "$249.50/mo",    sub: "Up to 200 servers"},
@@ -169,7 +169,7 @@ class Portal::RegisterPage
                   end
                 end
                 para class: "plan-note" do
-                  text "* Beta pricing — locked in permanently when you sign up now"
+                  text "* Free plan — up to 3 servers, no credit card required"
                 end
               end
 
