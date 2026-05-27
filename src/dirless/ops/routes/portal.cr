@@ -59,8 +59,8 @@ module Dirless
             # prevents two concurrent registrations from getting the same port.
             # BEGIN IMMEDIATE acquires a write lock immediately.
             random_part = Array.new(12) { ALPHA.sample }.join
-            max_port_result = db.scalar("SELECT MAX(CAST(SUBSTR(name, INSTR(name, '-') + 1) AS INTEGER)) FROM customers WHERE CAST(SUBSTR(name, INSTR(name, '-') + 1) AS INTEGER) >= 5001")
-            next_port = max_port_result.is_a?(Int64) ? max_port_result.to_i + 1 : 5001
+            max_port_result = db.scalar("SELECT MAX(CAST(SUBSTR(name, INSTR(name, '-') + 1) AS INTEGER)) FROM customers WHERE CAST(SUBSTR(name, INSTR(name, '-') + 1) AS INTEGER) >= 5002")
+            next_port = max_port_result.is_a?(Int64) ? max_port_result.to_i + 1 : 5002
             customer_name = "#{random_part}-#{next_port}"
 
             hmac_secret = Random::Secure.hex(32)
