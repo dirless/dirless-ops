@@ -23,3 +23,11 @@ growth_beta  = "price_replace_me"
 growth_full  = "price_replace_me"
 scale_beta   = "price_replace_me"
 scale_full   = "price_replace_me"
+
+[deployer]
+ansible_inventory = "/etc/dirless-ops/ansible/staging-inventory.ini"
+ansible_playbook  = "/etc/dirless-ops/ansible/provision-customers.yml"
+# ansible_ops_url = "https://staging-admin.dirless.com"
+# Override the ops API URL passed to the Ansible playbook.
+# Defaults to https://admin.dirless.com if not set (production).
+# Set this on staging so register-ops.yml hits the correct server.
