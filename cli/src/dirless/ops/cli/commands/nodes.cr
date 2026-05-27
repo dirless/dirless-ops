@@ -8,6 +8,14 @@ module Dirless
     module CLI
       module Commands
         module Nodes
+          def self.needs_tunnel?(args : Array(String)) : Bool
+            return false if args.empty?
+            sub = args.first
+            return false if {"help", "--help", "-h"}.includes?(sub)
+            return false if {"show", "delete"}.includes?(sub) && args.size == 1
+            true
+          end
+
           def self.run(args : Array(String), config : Config) : Nil
             if args.empty?
               STDERR.puts usage
@@ -67,6 +75,7 @@ module Dirless
               p.on("--provider PROVIDER", "Provider (default: atlanticnet)") { |v| provider = v }
               p.on("--primary", "Mark as primary node") { is_primary = true }
               p.on("-h", "--help", "Show help") { puts p; exit 0 }
+              p.invalid_option { |flag| STDERR.puts "Unknown option: #{flag}"; STDERR.puts p; exit 1 }
             end
 
             unless name && ip && region
@@ -117,6 +126,7 @@ module Dirless
               p.on("--primary", "Mark as primary") { body["is_primary"] = "true" }
               p.on("--no-primary", "Unmark as primary") { body["is_primary"] = "false" }
               p.on("-h", "--help", "Show help") { puts p; exit 0 }
+              p.invalid_option { |flag| STDERR.puts "Unknown option: #{flag}"; STDERR.puts p; exit 1 }
             end
 
             if body.empty?

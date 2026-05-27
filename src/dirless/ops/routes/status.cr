@@ -100,7 +100,7 @@ module Dirless
             {
               "id"             => customer.id,
               "name"           => customer.name,
-              "label"          => customer.label,
+              "company"        => customer.company,
               "aws_account_id" => customer.aws_account_id,
               "nodes"          => node_statuses,
             }

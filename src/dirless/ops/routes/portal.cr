@@ -1,7 +1,6 @@
 require "grip"
 require "json"
 require "../models/customer"
-require "../models/customer_account"
 require "../models/provision_job"
 
 module Dirless
@@ -12,6 +11,7 @@ module Dirless
       class PortalRegister
         include Grip::Controllers::HTTP
 
+        # ameba:disable Metrics/CyclomaticComplexity
         def post(context : Context) : Context
           body = context.request.body.try(&.gets_to_end) || ""
           begin
@@ -20,12 +20,15 @@ module Dirless
             return context.put_status(400).json({"error" => "malformed JSON: #{ex.message}"}).halt
           end
 
-          email      = parsed["email"]?.try(&.as_s).to_s.strip.downcase
-          password   = parsed["password"]?.try(&.as_s).to_s
-          first_name = parsed["first_name"]?.try(&.as_s).to_s.strip
-          last_name  = parsed["last_name"]?.try(&.as_s).to_s.strip
-          company    = parsed["company"]?.try(&.as_s).to_s.strip
-          country    = parsed["country"]?.try(&.as_s).to_s.strip
+          email          = parsed["email"]?.try(&.as_s).to_s.strip.downcase
+          password       = parsed["password"]?.try(&.as_s).to_s
+          first_name     = parsed["first_name"]?.try(&.as_s).to_s.strip
+          last_name      = parsed["last_name"]?.try(&.as_s).to_s.strip
+          company        = parsed["company"]?.try(&.as_s).to_s.strip
+          country        = parsed["country"]?.try(&.as_s).to_s.strip
+          # Admin-only override: skip email verification (safe — all /v1 routes require API key).
+          # Accepts JSON boolean true or string "true".
+          skip_verify = parsed["email_verified"]?.try { |v| v.as_bool? || v.as_s? == "true" } || false
 
           errors = {} of String => String
           errors["email"]      = "Required"                       if email.empty?
@@ -38,16 +41,17 @@ module Dirless
           errors["country"]    = "Required"                       if country.empty?
 
           unless errors.empty?
-            return context.put_status(422).json({"error" => errors.map { |f, m| "#{f}: #{m}" }.join("; "), "fields" => errors}).halt
+            return context.put_status(422).json({"error" => errors.map { |field, msg| "#{field}: #{msg}" }.join("; "), "fields" => errors}).halt
           end
 
-          if CustomerAccount.where(email: email).exists?
+          if Customer.where(email: email).exists?
             return context.put_status(409).json({"error" => "email already registered", "fields" => {"email" => "An account with this email already exists"}}).halt
           end
 
-          # Wrap all writes in a transaction so customer + account + job
-          # are created atomically (no partial state on failure).
+          # Wrap all writes in a transaction so customer + job are created atomically.
           db = Granite::Connections["sqlite"].not_nil![:writer].database
+          customer_name = ""
+          verify_token = ""
           begin
             db.exec("BEGIN IMMEDIATE")
 
@@ -60,37 +64,30 @@ module Dirless
             customer_name = "#{random_part}-#{next_port}"
 
             hmac_secret = Random::Secure.hex(32)
+            verify_token = Random::Secure.hex(32)
 
             customer = Customer.new(
               name: customer_name,
               hmac_secret: hmac_secret,
-              label: company,
-            )
-
-            unless customer.save
-              db.exec("ROLLBACK")
-              return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
-            end
-
-            verify_token = Random::Secure.hex(32)
-
-            account = CustomerAccount.new(
+              # Non-AWS customers have no aws_account_id to derive tenant_id from,
+              # so generate one now and persist it. The directory feature and the
+              # agent config both rely on this being stable.
+              tenant_id: "aws___" + Random::Secure.hex(32),
               email: email,
-              password_hash: CustomerAccount.hash_password(password),
-              customer_name: customer_name,
+              password_hash: Customer.hash_password(password),
               first_name: first_name,
               last_name: last_name,
               company: company,
               country: country,
               provisioned: false,
-              email_verified: false,
-              email_verify_token: verify_token,
+              email_verified: skip_verify,
+              email_verify_token: skip_verify ? nil : verify_token,
               beta_customer: false,
             )
 
-            unless account.save
+            unless customer.save
               db.exec("ROLLBACK")
-              return context.put_status(422).json({"error" => account.errors.map(&.message).join(", ")}).halt
+              return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
             end
 
             # Queue a provision job for the deployer to pick up
@@ -99,7 +96,7 @@ module Dirless
 
             db.exec("COMMIT")
             Ops.notifier.welcome(email, company, customer_name)
-            Ops.notifier.verify_email(email, verify_token)
+            Ops.notifier.verify_email(email, verify_token) unless skip_verify
           rescue ex
             db.exec("ROLLBACK") rescue nil
             Log.error { "Registration failed for #{email}: #{ex.class}: #{ex.message}" }
@@ -107,7 +104,7 @@ module Dirless
             return context.put_status(503).json({"error" => "Service temporarily unavailable, please try again"}).halt
           end
 
-          if (stripe = Ops.stripe_client)
+          if stripe = Ops.stripe_client
             begin
               beta = Ops.config.beta_mode
               meta = {"customer_name" => customer_name}
@@ -117,15 +114,15 @@ module Dirless
                 name: "#{first_name} #{last_name}",
                 metadata: meta
               )
-              account.stripe_customer_id = stripe_id
-              account.beta_customer = beta
-              account.save
+              customer.stripe_customer_id = stripe_id
+              customer.beta_customer = beta
+              customer.save
             rescue ex
               Log.error { "Stripe customer creation failed for #{email}: #{ex.message}" }
             end
           end
 
-          context.put_status(201).json(account.to_response).halt
+          context.put_status(201).json(customer.to_response).halt
         end
       end
 
@@ -154,10 +151,10 @@ module Dirless
           stripe = Ops.stripe_client
           return context.put_status(503).json({"error" => "payments not configured"}).halt unless stripe
 
-          account = CustomerAccount.find_by(customer_name: customer_name)
-          return context.put_status(404).json({"error" => "account not found"}).halt unless account
+          customer = Customer.find_by(name: customer_name)
+          return context.put_status(404).json({"error" => "account not found"}).halt unless customer
 
-          stripe_customer_id = account.stripe_customer_id
+          stripe_customer_id = customer.stripe_customer_id
           return context.put_status(422).json({"error" => "no stripe customer on record"}).halt unless stripe_customer_id
 
           beta    = Ops.config.beta_mode
@@ -202,13 +199,13 @@ module Dirless
             return context.put_status(402).json({"error" => "payment not completed"}).halt
           end
 
-          account = CustomerAccount.find_by(customer_name: result[:customer_name])
-          return context.put_status(404).json({"error" => "account not found"}).halt unless account
+          customer = Customer.find_by(name: result[:customer_name])
+          return context.put_status(404).json({"error" => "account not found"}).halt unless customer
 
-          account.plan = result[:plan]
-          account.save
+          customer.plan = result[:plan]
+          customer.save
 
-          context.put_status(200).json(account.to_response).halt
+          context.put_status(200).json(customer.to_response).halt
         end
       end
 
@@ -219,16 +216,16 @@ module Dirless
           token = context.request.query_params["token"]?.to_s.strip
           return context.put_status(400).json({"error" => "missing token"}).halt if token.empty?
 
-          account = CustomerAccount.find_by(email_verify_token: token)
-          return context.put_status(404).json({"error" => "invalid or expired token"}).halt unless account
+          customer = Customer.find_by(email_verify_token: token)
+          return context.put_status(404).json({"error" => "invalid or expired token"}).halt unless customer
 
-          account.email_verified = true
-          account.email_verify_token = nil
-          unless account.save
+          customer.email_verified = true
+          customer.email_verify_token = nil
+          unless customer.save
             return context.put_status(422).json({"error" => "could not verify email"}).halt
           end
 
-          context.put_status(200).json(account.to_response).halt
+          context.put_status(200).json(customer.to_response).halt
         end
       end
 
@@ -248,21 +245,23 @@ module Dirless
           customer_name = parsed["customer_name"]?.try(&.as_s).to_s.strip
           return context.put_status(400).json({"error" => "customer_name required"}).halt if customer_name.empty?
 
-          account = CustomerAccount.find_by(customer_name: customer_name)
-          return context.put_status(404).json({"error" => "account not found"}).halt unless account
-          return context.put_status(200).json({"ok" => true, "message" => "already verified"}).halt if account.email_verified
+          customer = Customer.find_by(name: customer_name)
+          return context.put_status(404).json({"error" => "account not found"}).halt unless customer
+          return context.put_status(200).json({"ok" => true, "message" => "already verified"}).halt if customer.email_verified
 
           # Rate limit: don't resend if updated recently
-          if (updated = account.updated_at)
+          if updated = customer.updated_at
             if Time.utc - updated < RESEND_COOLDOWN
               return context.put_status(429).json({"error" => "please wait before requesting another verification email"}).halt
             end
           end
 
           token = Random::Secure.hex(32)
-          account.email_verify_token = token
-          account.save
-          Ops.notifier.verify_email(account.email, token)
+          customer.email_verify_token = token
+          customer.save
+
+          email = customer.email || ""
+          Ops.notifier.verify_email(email, token) unless email.empty?
 
           context.put_status(200).json({"ok" => true}).halt
         end
@@ -286,10 +285,10 @@ module Dirless
           email = parsed["email"]?.try(&.as_s).to_s.strip.downcase
           password = parsed["password"]?.try(&.as_s).to_s
 
-          account = CustomerAccount.find_by(email: email)
+          customer = Customer.find_by(email: email)
 
-          if account
-            valid = account.verify_password(password)
+          if customer && customer.password_hash
+            valid = customer.verify_password(password)
           else
             # Burn the same amount of CPU time as a real verify to prevent
             # attackers from distinguishing "email not found" by response timing.
@@ -301,7 +300,8 @@ module Dirless
             return context.put_status(401).json({"error" => "Invalid email or password"}).halt
           end
 
-          context.put_status(200).json(account.not_nil!.to_response).halt
+          # customer is non-nil here: the `unless valid` guard above returns early.
+          context.put_status(200).json(customer.as(Customer).to_response).halt
         end
       end
     end

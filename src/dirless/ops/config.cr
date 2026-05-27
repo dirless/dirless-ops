@@ -10,6 +10,7 @@ module Dirless
       getter polling_interval_seconds : Int32
       getter ansible_inventory : String?
       getter ansible_playbook : String?
+      getter ansible_ops_url : String?
       getter mail_spool_dir : String
       getter ops_alert_email : String?
       getter deprovision_spool_dir : String
@@ -31,6 +32,7 @@ module Dirless
         if deployer = toml["deployer"]?
           @ansible_inventory = deployer["ansible_inventory"]?.try(&.as_s)
           @ansible_playbook = deployer["ansible_playbook"]?.try(&.as_s)
+          @ansible_ops_url = deployer["ansible_ops_url"]?.try(&.as_s)
         end
 
         @mail_spool_dir = toml["notifications"]?.try(&.["mail_spool_dir"]?.try(&.as_s)) ||

@@ -12,7 +12,7 @@ class Portal::CreateAccount < Lucky::Action
     company    = params.get?(:company).to_s.strip
     country    = params.get?(:country).to_s.strip
     plan       = params.get?(:plan).to_s.strip.downcase
-    plan       = "beta" unless {"beta", "starter", "growth", "scale"}.includes?(plan)
+    plan       = "free" unless {"free", "starter", "growth", "scale"}.includes?(plan)
 
     errors = {} of String => String
     values = {"email" => email, "first_name" => first_name, "last_name" => last_name, "company" => company, "country" => country, "plan" => plan}
@@ -39,14 +39,14 @@ class Portal::CreateAccount < Lucky::Action
         host  = request.headers["Host"]
         success_url = "#{proto}://#{host}/payment-success?session_id={CHECKOUT_SESSION_ID}"
         cancel_url  = "#{proto}://#{host}/register"
-        checkout_url = daemon.create_checkout_session(account.customer_name, plan, success_url, cancel_url)
+        checkout_url = daemon.create_checkout_session(account.name, plan, success_url, cancel_url)
         redirect to: checkout_url
       else
-        session.set(:portal_email, account.email)
-        session.set(:portal_customer_name, account.customer_name)
+        session.set(:portal_email, account.email || "")
+        session.set(:portal_customer_name, account.name)
         session.set(:portal_company, account.company || "")
-        session.set(:portal_provisioned, account.provisioned.to_s)
-        session.set(:portal_email_verified, account.email_verified.to_s)
+        session.set(:portal_provisioned, (account.provisioned || false).to_s)
+        session.set(:portal_email_verified, (account.email_verified || false).to_s)
         redirect to: Portal::Dashboard
       end
     rescue ex : Dirless::Ops::WebUI::DaemonClient::Error

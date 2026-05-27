@@ -21,7 +21,7 @@ class Portal::RegisterPage
             var btn = document.getElementById('submit-btn');
             function update() {
               var val = document.querySelector('input[name="plan"]:checked').value;
-              btn.textContent = val === 'beta' ? 'Create account' : 'Create account & continue to payment';
+              btn.textContent = val === 'free' ? 'Create account' : 'Create account & continue to payment';
               document.querySelectorAll('.plan-card').forEach(function(card) {
                 card.classList.remove('plan-card-selected');
               });
@@ -144,9 +144,9 @@ class Portal::RegisterPage
               div class: "form-group" do
                 label "Choose your plan", class: "form-label"
                 div class: "plan-grid" do
-                  selected_plan = @values["plan"]? || "beta"
+                  selected_plan = @values["plan"]? || "free"
                   [
-                    {value: "beta",    label: "Free",    price: "Free",          sub: "Up to 3 servers"},
+                    {value: "free",    label: "Free",    price: "Free",          sub: "Up to 3 servers"},
                     {value: "starter", label: "Starter", price: "$24.50/mo",     sub: "Up to 10 servers"},
                     {value: "growth",  label: "Growth",  price: "$99.50/mo",     sub: "Up to 50 servers"},
                     {value: "scale",   label: "Scale",   price: "$249.50/mo",    sub: "Up to 200 servers"},

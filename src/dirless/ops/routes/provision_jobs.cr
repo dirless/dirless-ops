@@ -1,7 +1,7 @@
 require "grip"
 require "json"
 require "../models/provision_job"
-require "../models/customer_account"
+require "../models/customer"
 
 module Dirless
   module Ops
@@ -58,6 +58,10 @@ module Dirless
             end
             job.status = s
             case s
+            when "pending"
+              job.started_at = nil
+              job.completed_at = nil
+              job.error = nil
             when "in_progress"
               job.started_at = Time.utc
             when "completed", "failed"
@@ -73,12 +77,12 @@ module Dirless
             return context.put_status(422).json({"error" => job.errors.map(&.message).join(", ")}).halt
           end
 
-          # Mark the customer account as provisioned when the job completes
+          # Mark the customer as provisioned when the job completes
           if job.status == "completed"
-            account = CustomerAccount.find_by(customer_name: job.customer_name)
-            if account
-              account.provisioned = true
-              account.save
+            customer = Customer.find_by(name: job.customer_name)
+            if customer
+              customer.provisioned = true
+              customer.save
             end
           end
 

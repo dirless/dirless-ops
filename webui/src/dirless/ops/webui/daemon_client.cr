@@ -69,12 +69,12 @@ module Dirless
           status.find { |c| c.name == name }
         end
 
-        def portal_register(email : String, password : String, first_name : String, last_name : String, company : String, country : String) : PortalAccountResponse
-          PortalAccountResponse.from_json(post("/v1/portal/register", {"email" => email, "password" => password, "first_name" => first_name, "last_name" => last_name, "company" => company, "country" => country}))
+        def portal_register(email : String, password : String, first_name : String, last_name : String, company : String, country : String) : CustomerResponse
+          CustomerResponse.from_json(post("/v1/portal/register", {"email" => email, "password" => password, "first_name" => first_name, "last_name" => last_name, "company" => company, "country" => country}))
         end
 
-        def portal_login(email : String, password : String) : PortalAccountResponse
-          PortalAccountResponse.from_json(post("/v1/portal/login", {"email" => email, "password" => password}))
+        def portal_login(email : String, password : String) : CustomerResponse
+          CustomerResponse.from_json(post("/v1/portal/login", {"email" => email, "password" => password}))
         end
 
         def create_checkout_session(customer_name : String, plan : String, success_url : String, cancel_url : String) : String
@@ -87,16 +87,37 @@ module Dirless
           resp.url
         end
 
-        def verify_checkout_session(session_id : String) : PortalAccountResponse
-          PortalAccountResponse.from_json(get("/v1/portal/checkout/#{session_id}"))
+        def verify_checkout_session(session_id : String) : CustomerResponse
+          CustomerResponse.from_json(get("/v1/portal/checkout/#{session_id}"))
         end
 
-        def verify_email(token : String) : PortalAccountResponse
-          PortalAccountResponse.from_json(get("/v1/portal/verify-email?token=#{URI.encode_path(token)}"))
+        def verify_email(token : String) : CustomerResponse
+          CustomerResponse.from_json(get("/v1/portal/verify-email?token=#{URI.encode_path(token)}"))
         end
 
         def resend_verification(customer_name : String) : Nil
           post("/v1/portal/resend-verification", {"customer_name" => customer_name})
+        end
+
+        # Returns the base64-encoded encrypted snapshot blob for the given customer,
+        # or nil if no snapshot exists yet (HTTP 204 from the ops API).
+        def fetch_directory_snapshot(customer_name : String) : String?
+          response = HTTP::Client.get(
+            "#{@url}/v1/customers/#{customer_name}/directory/snapshot",
+            headers: auth_headers
+          )
+          return nil if response.status_code == 204
+          check!(response)
+          parsed = JSON.parse(response.body)
+          parsed["blob"]?.try(&.as_s)
+        end
+
+        # Pushes a base64-encoded encrypted snapshot blob to the customer's backend.
+        # The *recipient* is the age public key that was used to encrypt the blob.
+        def push_directory_snapshot(customer_name : String, blob_b64 : String, recipient : String = "") : Nil
+          payload = {"blob" => blob_b64}
+          payload["recipient"] = recipient unless recipient.empty?
+          post("/v1/customers/#{customer_name}/directory/snapshot", payload)
         end
 
         private def get(path : String) : String

@@ -108,6 +108,44 @@ module Dirless
       # New registrations set email_verified = 0 explicitly and go through the flow.
       "ALTER TABLE customer_accounts ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1",
       "ALTER TABLE customer_accounts ADD COLUMN email_verify_token TEXT",
+      # Migration: explicit tenant_id for non-AWS customers (AWS customers derive it at runtime).
+      "ALTER TABLE customers ADD COLUMN tenant_id TEXT",
+      # Migration: merge customer_accounts into customers (2026-05-25)
+      "ALTER TABLE customers ADD COLUMN email TEXT",
+      "ALTER TABLE customers ADD COLUMN password_hash TEXT",
+      "ALTER TABLE customers ADD COLUMN first_name TEXT",
+      "ALTER TABLE customers ADD COLUMN last_name TEXT",
+      "ALTER TABLE customers ADD COLUMN company TEXT",
+      "ALTER TABLE customers ADD COLUMN country TEXT",
+      # DEFAULT 1 so admin-created customers are treated as verified (no email flow).
+      # New portal registrations always set email_verified = 0 explicitly.
+      "ALTER TABLE customers ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1",
+      "ALTER TABLE customers ADD COLUMN email_verify_token TEXT",
+      "ALTER TABLE customers ADD COLUMN provisioned INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE customers ADD COLUMN stripe_customer_id TEXT",
+      "ALTER TABLE customers ADD COLUMN beta_customer INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE customers ADD COLUMN plan TEXT",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_email ON customers (email)",
+      # Backfill account data from customer_accounts into customers.
+      # Uses correlated subqueries; silently skipped if customer_accounts doesn't exist.
+      "UPDATE customers SET " \
+        "email = (SELECT email FROM customer_accounts WHERE customer_name = customers.name), " \
+        "password_hash = (SELECT password_hash FROM customer_accounts WHERE customer_name = customers.name), " \
+        "first_name = (SELECT first_name FROM customer_accounts WHERE customer_name = customers.name), " \
+        "last_name = (SELECT last_name FROM customer_accounts WHERE customer_name = customers.name), " \
+        "company = (SELECT company FROM customer_accounts WHERE customer_name = customers.name), " \
+        "country = (SELECT country FROM customer_accounts WHERE customer_name = customers.name), " \
+        "provisioned = (SELECT provisioned FROM customer_accounts WHERE customer_name = customers.name), " \
+        "email_verified = (SELECT email_verified FROM customer_accounts WHERE customer_name = customers.name), " \
+        "email_verify_token = (SELECT email_verify_token FROM customer_accounts WHERE customer_name = customers.name), " \
+        "stripe_customer_id = (SELECT stripe_customer_id FROM customer_accounts WHERE customer_name = customers.name), " \
+        "beta_customer = (SELECT beta_customer FROM customer_accounts WHERE customer_name = customers.name), " \
+        "plan = (SELECT plan FROM customer_accounts WHERE customer_name = customers.name) " \
+        "WHERE EXISTS (SELECT 1 FROM customer_accounts WHERE customer_name = customers.name)",
+      # Backfill company from legacy label column for admin-created customers.
+      "UPDATE customers SET company = label WHERE company IS NULL AND label IS NOT NULL",
+      # Migration: track how many times a provision job has been auto-reset due to timeout.
+      "ALTER TABLE provision_jobs ADD COLUMN reset_count INTEGER",
     ]
 
     def self.setup_db(database_path : String)

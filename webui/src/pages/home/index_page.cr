@@ -17,8 +17,8 @@ class Home::IndexPage < MainLayout
           div class: "flex items-center justify-between" do
             div class: "flex items-center gap-3" do
               div do
-                span customer.label || customer.name, class: "font-semibold text-gray-900"
-                if customer.label
+                span customer.company || customer.name, class: "font-semibold text-gray-900"
+                if customer.company
                   span " · Customer: #{customer.name}", class: "text-sm text-gray-500 ml-2"
                 end
               end

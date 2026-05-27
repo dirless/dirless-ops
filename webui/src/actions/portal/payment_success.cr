@@ -11,8 +11,8 @@ class Portal::PaymentSuccess < Lucky::Action
 
     begin
       account = daemon.verify_checkout_session(session_id)
-      session.set(:portal_email, account.email)
-      session.set(:portal_customer_name, account.customer_name)
+      session.set(:portal_email, account.email || "")
+      session.set(:portal_customer_name, account.name)
       session.set(:portal_company, account.company || "")
       session.set(:portal_provisioned, account.provisioned.to_s)
       flash.success = "Payment confirmed! Welcome to Dirless."

@@ -15,7 +15,6 @@ Dirless::Ops.setup_db(_config.database_path)
 require "./dirless/ops/models/customer"
 require "./dirless/ops/models/node"
 require "./dirless/ops/models/health_check"
-require "./dirless/ops/models/customer_account"
 require "./dirless/ops/models/provision_job"
 require "./dirless/ops/deployer"
 require "./dirless/ops/node_prober"
@@ -42,6 +41,7 @@ require "./dirless/ops/routes/nodes"
 require "./dirless/ops/routes/status"
 require "./dirless/ops/routes/portal"
 require "./dirless/ops/routes/provision_jobs"
+require "./dirless/ops/routes/directory"
 
 module Dirless
   module Ops
@@ -112,6 +112,8 @@ module Dirless
             get "/:name", Controllers::GetCustomer
             patch "/:name", Controllers::UpdateCustomer
             delete "/:name", Controllers::DeleteCustomer
+            get "/:name/directory/snapshot", Controllers::GetDirectorySnapshot
+            post "/:name/directory/snapshot", Controllers::PushDirectorySnapshot
           end
 
           scope "/nodes" do

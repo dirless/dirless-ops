@@ -1,7 +1,6 @@
 require "grip"
 require "json"
 require "../models/customer"
-require "../models/customer_account"
 
 module Dirless
   module Ops
@@ -56,12 +55,25 @@ module Dirless
             return context.put_status(409).json({"error" => "customer already exists", "fields" => {"name" => "A customer with this name already exists"}}).halt
           end
 
+          explicit_tenant_id = parsed["tenant_id"]?.try(&.as_s)
+          aws_id             = parsed["aws_account_id"]?.try(&.as_s)
+
+          # For non-AWS customers (no aws_account_id) generate a stable tenant_id
+          # now so the directory feature always has one to work with.
+          # AWS customers derive theirs at runtime from aws_account_id + hmac_secret.
+          derived_tenant_id = if explicit_tenant_id
+                                explicit_tenant_id
+                              elsif aws_id.nil? || aws_id.empty?
+                                "aws___" + Random::Secure.hex(32)
+                              end
+
           customer = Customer.new(
             name: name,
             hmac_secret: hmac_secret,
             label: parsed["label"]?.try(&.as_s),
-            aws_account_id: parsed["aws_account_id"]?.try(&.as_s),
+            aws_account_id: aws_id,
             notes: parsed["notes"]?.try(&.as_s),
+            tenant_id: derived_tenant_id,
           )
 
           unless customer.save
@@ -106,9 +118,11 @@ module Dirless
           end
 
           parsed["label"]?.try { |v| customer.label = v.as_s? }
+          parsed["company"]?.try { |v| customer.company = v.as_s? }
           parsed["hmac_secret"]?.try { |v| v.as_s?.try { |s| customer.hmac_secret = s } }
           parsed["aws_account_id"]?.try { |v| customer.aws_account_id = v.as_s? }
           parsed["notes"]?.try { |v| customer.notes = v.as_s? }
+          parsed["tenant_id"]?.try { |v| customer.tenant_id = v.as_s? }
 
           unless customer.save
             return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
@@ -129,11 +143,11 @@ module Dirless
             return context.put_status(404).json({"error" => "customer not found"}).halt
           end
 
-          account = CustomerAccount.find_by(customer_name: name)
+          email = customer.email
+          company = customer.company || name
           customer.destroy
-          if account
-            Ops.notifier.account_deleted(account.email, account.company || name)
-            account.destroy
+          if email
+            Ops.notifier.account_deleted(email, company)
           end
           queue_deprovision(name)
           context.put_status(204).halt

@@ -8,10 +8,25 @@ module Dirless
     module CLI
       module Commands
         module Customers
+          VALID_PLANS = {"free", "starter", "growth", "scale"}
+
+          # Characters used for auto-generated passwords: mixed case + digits.
+          # No special characters to avoid copy-paste / terminal escaping issues.
+          PASSWORD_CHARS = (('a'..'z').to_a + ('A'..'Z').to_a + ('0'..'9').to_a)
+          PASSWORD_LEN   = 20
+
+          def self.needs_tunnel?(args : Array(String)) : Bool
+            return false if args.empty?
+            sub = args.first
+            return false if {"help", "--help", "-h"}.includes?(sub)
+            return false if {"show", "delete"}.includes?(sub) && args.size == 1
+            true
+          end
+
           def self.run(args : Array(String), config : Config) : Nil
             if args.empty?
-              STDERR.puts usage
-              exit 1
+              puts usage
+              exit 0
             end
 
             subcommand = args.shift
@@ -19,7 +34,7 @@ module Dirless
 
             case subcommand
             when "list"   then list(client)
-            when "add"    then add(args, client)
+            when "create" then create(args, client, config)
             when "show"   then show(args, client)
             when "update" then update(args, client)
             when "delete" then delete(args, client)
@@ -39,58 +54,118 @@ module Dirless
               return
             end
             Table.print(
-              ["NAME", "LABEL", "PORT", "AWS ACCOUNT"],
-              customers.map { |c|
+              ["NAME", "COMPANY", "EMAIL", "PLAN", "PROVISIONED", "VERIFIED"],
+              customers.map { |customer|
                 [
-                  c["name"].as_s,
-                  c["label"].as_s? || "-",
-                  c["port"].as_i.to_s,
-                  c["aws_account_id"].as_s? || "-",
+                  customer["name"].as_s,
+                  customer["company"].as_s? || "-",
+                  customer["email"].as_s? || "-",
+                  customer["plan"].as_s? || "free",
+                  customer["provisioned"].as_bool? ? "yes" : "no",
+                  customer["email_verified"].as_bool? ? "yes" : "no",
                 ]
               }
             )
           end
 
-          private def self.add(args : Array(String), client : Client) : Nil
-            name = nil
-            hmac_secret = nil
-            label = nil
-            aws_account_id = nil
-            notes = nil
+          # ameba:disable Metrics/CyclomaticComplexity
+          private def self.create(args : Array(String), client : Client, config : Config) : Nil
+            email = nil
+            password = nil
+            first_name = nil
+            last_name = nil
+            company = nil
+            country = "US"
+            plan = "free"
+            verified = false
 
-            OptionParser.parse(args) do |p|
-              p.banner = "Usage: dirless-ops customers add [options]"
-              p.on("--name NAME", "Customer name (e.g. ewmilnqiuhxu-5000)") { |v| name = v }
-              p.on("--hmac-secret SECRET", "HMAC enrollment secret") { |v| hmac_secret = v }
-              p.on("--label LABEL", "Human-readable label") { |v| label = v }
-              p.on("--aws-account-id ID", "AWS account ID") { |v| aws_account_id = v }
-              p.on("--notes NOTES", "Notes") { |v| notes = v }
-              p.on("-h", "--help", "Show help") { puts p; exit 0 }
+            OptionParser.parse(args) do |opt|
+              opt.banner = "Usage: dirless-ops-cli customers create [options]"
+              opt.on("--email EMAIL", "Customer email address") { |v| email = v }
+              opt.on("--password PASSWORD", "Password override (auto-generated if omitted)") { |v| password = v }
+              opt.on("--first-name NAME", "First name") { |v| first_name = v }
+              opt.on("--last-name NAME", "Last name") { |v| last_name = v }
+              opt.on("--company COMPANY", "Company / organisation name") { |v| company = v }
+              opt.on("--country CODE", "ISO 3166-1 alpha-2 country code (default: US)") { |v| country = v.upcase }
+              opt.on("--plan PLAN", "Plan: free, starter, growth, scale (default: free)") { |v| plan = v.downcase }
+              opt.on("--verified", "Mark email as already verified (skips verification email)") { verified = true }
+              opt.on("-h", "--help", "Show help") { puts opt; exit 0 }
+              opt.invalid_option { |flag| STDERR.puts "Unknown option: #{flag}"; STDERR.puts opt; exit 1 }
             end
 
-            unless name && hmac_secret
-              STDERR.puts "Error: --name and --hmac-secret are required"
+            unless VALID_PLANS.includes?(plan)
+              STDERR.puts "Error: invalid plan '#{plan}'. Valid plans: #{VALID_PLANS.join(", ")}"
               exit 1
             end
 
-            body = {"name" => name, "hmac_secret" => hmac_secret} of String => String?
-            body["label"] = label if label
-            body["aws_account_id"] = aws_account_id if aws_account_id
-            body["notes"] = notes if notes
+            env_label = config.env_name.empty? ? "" : " [#{config.env_name}]"
+            puts "Creating customer on #{config.url}#{env_label}"
+            puts ""
 
-            customer = client.post("/v1/customers/", body)
-            puts "Created: #{customer["name"]}"
+            # Collect any fields not supplied via flags interactively.
+            email_s = email || prompt("Email: ")
+            first_name_s = first_name || prompt("First name: ")
+            last_name_s = last_name || prompt("Last name: ")
+            company_s = company || prompt("Company: ")
+
+            # Auto-generate a password unless one was explicitly provided.
+            generated_password = password.nil?
+            password_s = password || generate_password
+
+            body = {
+              "email"          => email_s,
+              "password"       => password_s,
+              "first_name"     => first_name_s,
+              "last_name"      => last_name_s,
+              "company"        => company_s,
+              "country"        => country,
+              "email_verified" => verified.to_s,
+            }
+
+            print "Creating customer for #{email_s}... "
+            STDOUT.flush
+            customer = client.post("/v1/portal/register", body)
+            puts "done."
+            puts ""
+
+            puts "  Email:         #{customer["email"]}"
+            puts "  Name:          #{customer["name"]}"
+            puts "  Company:       #{customer["company"].as_s? || "-"}"
+            puts "  Plan:          #{customer["plan"].as_s? || "free"}"
+            puts "  Provisioned:   #{customer["provisioned"]}"
+            puts "  Created:       #{customer["created_at"].as_s? || "-"}"
+
+            if generated_password
+              puts ""
+              puts "  Password:      #{password_s}"
+              puts "  ⚠  Share this securely — it won't be shown again."
+            end
+
+            puts ""
+            puts "Welcome and verification emails sent to #{email_s}."
+            puts "Provisioning will start automatically within ~30 seconds."
+
+            if {"starter", "growth", "scale"}.includes?(plan)
+              puts ""
+              puts "Note: --plan #{plan} was specified but the portal register endpoint"
+              puts "always creates accounts on the Free plan. Direct the customer to"
+              puts "portal.dirless.com to complete payment and activate the #{plan} plan."
+            end
           end
 
           private def self.show(args : Array(String), client : Client) : Nil
             name = args.shift? || begin
-              STDERR.puts "Usage: dirless-ops customers show <name>"
+              STDERR.puts "Usage: dirless-ops-cli customers show <name>"
               exit 1
             end
 
             c = client.get("/v1/customers/#{name}")
             puts "Name:           #{c["name"]}"
-            puts "Label:          #{c["label"].as_s? || "-"}"
+            puts "Company:        #{c["company"].as_s? || "-"}"
+            puts "Email:          #{c["email"].as_s? || "-"}"
+            puts "Plan:           #{c["plan"].as_s? || "free"}"
+            puts "Provisioned:    #{c["provisioned"].as_bool? ? "yes" : "no"}"
+            puts "Email Verified: #{c["email_verified"].as_bool? ? "yes" : "no"}"
             puts "Port:           #{c["port"]}"
             puts "HMAC Secret:    #{c["hmac_secret"]}"
             puts "AWS Account ID: #{c["aws_account_id"].as_s? || "-"}"
@@ -100,19 +175,20 @@ module Dirless
 
           private def self.update(args : Array(String), client : Client) : Nil
             name = args.shift? || begin
-              STDERR.puts "Usage: dirless-ops customers update <name> [options]"
+              STDERR.puts "Usage: dirless-ops-cli customers update <name> [options]"
               exit 1
             end
 
             body = {} of String => String
 
-            OptionParser.parse(args) do |p|
-              p.banner = "Usage: dirless-ops customers update <name> [options]"
-              p.on("--hmac-secret SECRET", "New HMAC secret") { |v| body["hmac_secret"] = v }
-              p.on("--label LABEL", "New label") { |v| body["label"] = v }
-              p.on("--aws-account-id ID", "New AWS account ID") { |v| body["aws_account_id"] = v }
-              p.on("--notes NOTES", "New notes") { |v| body["notes"] = v }
-              p.on("-h", "--help", "Show help") { puts p; exit 0 }
+            OptionParser.parse(args) do |opt|
+              opt.banner = "Usage: dirless-ops-cli customers update <name> [options]"
+              opt.on("--hmac-secret SECRET", "New HMAC secret") { |v| body["hmac_secret"] = v }
+              opt.on("--company COMPANY", "New company name") { |v| body["company"] = v }
+              opt.on("--aws-account-id ID", "New AWS account ID") { |v| body["aws_account_id"] = v }
+              opt.on("--notes NOTES", "New notes") { |v| body["notes"] = v }
+              opt.on("-h", "--help", "Show help") { puts opt; exit 0 }
+              opt.invalid_option { |flag| STDERR.puts "Unknown option: #{flag}"; STDERR.puts opt; exit 1 }
             end
 
             if body.empty?
@@ -126,7 +202,7 @@ module Dirless
 
           private def self.delete(args : Array(String), client : Client) : Nil
             name = args.shift? || begin
-              STDERR.puts "Usage: dirless-ops customers delete <name>"
+              STDERR.puts "Usage: dirless-ops-cli customers delete <name>"
               exit 1
             end
 
@@ -134,16 +210,43 @@ module Dirless
             puts "Deleted: #{name}"
           end
 
+          # Generates a cryptographically secure random password.
+          private def self.generate_password : String
+            Array.new(PASSWORD_LEN) { PASSWORD_CHARS.sample(Random::Secure) }.join
+          end
+
+          # Read a required single-line value from stdin.
+          private def self.prompt(label : String) : String
+            print label
+            STDOUT.flush
+            value = STDIN.gets.to_s.strip
+            if value.empty?
+              STDERR.puts "Error: #{label.strip.chomp(':').downcase} is required"
+              exit 1
+            end
+            value
+          end
+
           private def self.usage : String
             <<-USAGE
-            Usage: dirless-ops customers <subcommand> [options]
+            Usage: dirless-ops-cli customers <subcommand> [options]
 
             Subcommands:
-              list                      List all customers
-              add    --name --hmac-secret [--label] [--aws-account-id] [--notes]
-              show   <name>
-              update <name> [--hmac-secret] [--label] [--aws-account-id] [--notes]
-              delete <name>
+              list      List all customers
+              create    Create a new customer (full registration + provision flow)
+              show      <name>
+              update    <name> [--company] [--hmac-secret] [--aws-account-id] [--notes]
+              delete    <name>
+
+            Examples:
+              dirless-ops-cli customers list
+              dirless-ops-cli customers create
+              dirless-ops-cli customers create --email alice@corp.com --first-name Alice \\
+                --last-name Smith --company Acme --country GB
+              dirless-ops-cli --env prod customers create --email alice@corp.com
+              dirless-ops-cli customers show ewmilnqiuhxu-5000
+
+            Run 'dirless-ops-cli customers create --help' for all flags.
             USAGE
           end
         end

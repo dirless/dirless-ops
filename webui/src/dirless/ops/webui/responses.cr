@@ -8,13 +8,21 @@ module Dirless
 
         property id : Int32
         property name : String
-        property label : String?
         property hmac_secret : String
         property aws_account_id : String?
         property notes : String?
         property port : Int32
         property created_at : String?
         property updated_at : String?
+        # Account fields (merged from customer_accounts)
+        property email : String?
+        property first_name : String?
+        property last_name : String?
+        property company : String?
+        property country : String?
+        property provisioned : Bool?
+        property email_verified : Bool?
+        property plan : String?
       end
 
       struct NodeResponse
@@ -74,7 +82,7 @@ module Dirless
 
         property id : Int32
         property name : String
-        property label : String?
+        property company : String?
         property aws_account_id : String?
         property nodes : Array(NodeStatusResponse)
       end
@@ -89,22 +97,6 @@ module Dirless
         property created_at : String?
         property started_at : String?
         property completed_at : String?
-      end
-
-      struct PortalAccountResponse
-        include JSON::Serializable
-
-        property id : Int32
-        property email : String
-        property customer_name : String
-        property first_name : String?
-        property last_name : String?
-        property company : String?
-        property country : String?
-        property provisioned : Bool
-        property email_verified : Bool
-        property plan : String
-        property created_at : String?
       end
 
       struct CheckoutSessionResponse

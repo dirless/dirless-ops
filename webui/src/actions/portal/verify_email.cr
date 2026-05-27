@@ -11,7 +11,7 @@ class Portal::VerifyEmail < Lucky::Action
 
     begin
       account = daemon.verify_email(token)
-      session.set(:portal_email_verified, "true") if session.get?(:portal_email) == account.email
+      session.set(:portal_email_verified, "true") if session.get?(:portal_email) == (account.email || "")
       flash.success = "Email verified! Your environment is being set up."
       redirect to: Portal::Login
     rescue ex : Dirless::Ops::WebUI::DaemonClient::Error

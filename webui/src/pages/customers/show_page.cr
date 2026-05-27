@@ -11,7 +11,7 @@ class Customers::ShowPage < MainLayout
 
     div class: "flex items-start justify-between mb-6" do
       div do
-        h1 customer.label || customer.name, class: "text-2xl font-bold text-gray-900"
+        h1 customer.company || customer.name, class: "text-2xl font-bold text-gray-900"
         para customer.name, class: "text-gray-500 font-mono text-sm mt-1"
       end
       form action: "/customers/#{customer.name}", method: "post" do
@@ -25,7 +25,7 @@ class Customers::ShowPage < MainLayout
 
     div class: "bg-white rounded-lg shadow-sm border border-gray-200 divide-y divide-gray-100 mb-8" do
       field_row("Name", customer.name, mono: true)
-      field_row("Label", customer.label || "-")
+      field_row("Company", customer.company || "-")
       field_row("Port", customer.port.to_s)
       field_row("AWS Account ID", customer.aws_account_id || "-")
       field_row("Notes", customer.notes || "-")

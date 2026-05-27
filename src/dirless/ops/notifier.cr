@@ -136,6 +136,10 @@ module Dirless
         queue(to, "Node down: #{node_name}", body)
       end
 
+      def ops_alert(to : String, subject : String, body : String)
+        queue(to, subject, body)
+      end
+
       private def queue(to : String, subject : String, body : String)
         spawn do
           begin

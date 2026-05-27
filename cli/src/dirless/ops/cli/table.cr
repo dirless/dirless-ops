@@ -15,16 +15,16 @@ module Dirless
         end
       end
 
-      ANSI_GREEN   = "\e[32m"
-      ANSI_RED     = "\e[31m"
-      ANSI_YELLOW  = "\e[33m"
-      ANSI_RESET   = "\e[0m"
+      ANSI_GREEN  = "\e[32m"
+      ANSI_RED    = "\e[31m"
+      ANSI_YELLOW = "\e[33m"
+      ANSI_RESET  = "\e[0m"
 
       def self.colorize_status(status : String) : String
         case status
-        when "up"      then "#{ANSI_GREEN}#{status}#{ANSI_RESET}"
-        when "down"    then "#{ANSI_RED}#{status}#{ANSI_RESET}"
-        else                "#{ANSI_YELLOW}#{status}#{ANSI_RESET}"
+        when "up"   then "#{ANSI_GREEN}#{status}#{ANSI_RESET}"
+        when "down" then "#{ANSI_RED}#{status}#{ANSI_RESET}"
+        else             "#{ANSI_YELLOW}#{status}#{ANSI_RESET}"
         end
       end
     end

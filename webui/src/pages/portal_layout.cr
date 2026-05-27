@@ -4,6 +4,11 @@ abstract class PortalLayout
   abstract def content
   abstract def page_title : String
 
+  # Override in a page to highlight a different sidebar item.
+  def active_nav : String
+    "dashboard"
+  end
+
   needs email : String
   needs company : String
   needs flash : Lucky::FlashStore
@@ -28,7 +33,10 @@ abstract class PortalLayout
               end
             end
             nav class: "sidebar-nav" do
-              a "Dashboard", href: "/dashboard", class: "nav-item nav-item-active"
+              a "Dashboard", href: "/dashboard",
+                class: "nav-item#{active_nav == "dashboard" ? " nav-item-active" : ""}"
+              a "Directory", href: "/directory",
+                class: "nav-item#{active_nav == "directory" ? " nav-item-active" : ""}"
             end
             div class: "sidebar-footer" do
               div class: "sidebar-user" do

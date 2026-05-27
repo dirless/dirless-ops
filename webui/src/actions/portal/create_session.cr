@@ -7,11 +7,11 @@ class Portal::CreateSession < Lucky::Action
 
     begin
       account = daemon.portal_login(email, password)
-      session.set(:portal_email, account.email)
-      session.set(:portal_customer_name, account.customer_name)
+      session.set(:portal_email, account.email || "")
+      session.set(:portal_customer_name, account.name)
       session.set(:portal_company, account.company || "")
-      session.set(:portal_provisioned, account.provisioned.to_s)
-      session.set(:portal_email_verified, account.email_verified.to_s)
+      session.set(:portal_provisioned, (account.provisioned || false).to_s)
+      session.set(:portal_email_verified, (account.email_verified || false).to_s)
       redirect to: Portal::Dashboard
     rescue ex : Dirless::Ops::WebUI::DaemonClient::Error
       html Portal::LoginPage, error: "Invalid email or password"

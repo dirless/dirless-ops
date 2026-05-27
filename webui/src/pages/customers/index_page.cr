@@ -20,7 +20,7 @@ class Customers::IndexPage < MainLayout
         thead do
           tr class: "bg-gray-50" do
             th "Name", class: "px-6 py-3 text-left font-medium text-gray-500"
-            th "Label", class: "px-6 py-3 text-left font-medium text-gray-500"
+            th "Company", class: "px-6 py-3 text-left font-medium text-gray-500"
             th "Port", class: "px-6 py-3 text-left font-medium text-gray-500"
             th "AWS Account", class: "px-6 py-3 text-left font-medium text-gray-500"
             th "", class: "px-6 py-3"
@@ -33,7 +33,7 @@ class Customers::IndexPage < MainLayout
                 a customer.name, href: "/customers/#{customer.name}",
                   class: "text-blue-600 hover:underline font-mono text-xs"
               end
-              td customer.label || "-", class: "px-6 py-3 text-gray-700"
+              td customer.company || "-", class: "px-6 py-3 text-gray-700"
               td customer.port.to_s, class: "px-6 py-3 text-gray-500"
               td customer.aws_account_id || "-", class: "px-6 py-3 text-gray-500"
               td class: "px-6 py-3 text-right" do

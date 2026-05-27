@@ -3,7 +3,7 @@ class Customers::Create < BrowserAction
     body = {} of String => String
     body["name"] = params.get(:name)
     body["hmac_secret"] = params.get(:hmac_secret)
-    params.get?(:label).try { |v| body["label"] = v unless v.empty? }
+    params.get?(:company).try { |v| body["company"] = v unless v.empty? }
     params.get?(:aws_account_id).try { |v| body["aws_account_id"] = v unless v.empty? }
     params.get?(:notes).try { |v| body["notes"] = v unless v.empty? }
 

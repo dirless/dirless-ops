@@ -1,5 +1,5 @@
 require "granite"
-
+require "crypto/bcrypt/password"
 
 module Dirless
   module Ops
@@ -9,10 +9,26 @@ module Dirless
 
       column id : Int64, primary: true
       column name : String
-      column label : String?
+      column label : String?           # legacy; superseded by company
       column hmac_secret : String
       column aws_account_id : String?
       column notes : String?
+      column tenant_id : String?
+
+      # Account fields (merged from customer_accounts table)
+      column email : String?
+      column password_hash : String?
+      column first_name : String?
+      column last_name : String?
+      column company : String?
+      column country : String?
+      column provisioned : Bool?
+      column email_verified : Bool?
+      column email_verify_token : String?
+      column stripe_customer_id : String?
+      column beta_customer : Bool?
+      column plan : String?
+
       timestamps
 
       def port : Int32
@@ -21,15 +37,33 @@ module Dirless
         0
       end
 
+      def self.hash_password(password : String) : String
+        Crypto::Bcrypt::Password.create(password, cost: 12).to_s
+      end
+
+      def verify_password(password : String) : Bool
+        Crypto::Bcrypt::Password.new(password_hash || "").verify(password)
+      rescue
+        false
+      end
+
       def to_response
         {
           "id"             => id,
           "name"           => name,
-          "label"          => label,
           "hmac_secret"    => hmac_secret,
           "aws_account_id" => aws_account_id,
           "notes"          => notes,
+          "tenant_id"      => tenant_id,
           "port"           => port,
+          "email"          => email,
+          "first_name"     => first_name,
+          "last_name"      => last_name,
+          "company"        => company,
+          "country"        => country,
+          "provisioned"    => provisioned,
+          "email_verified" => email_verified,
+          "plan"           => plan || "free",
           "created_at"     => created_at.try(&.to_rfc3339),
           "updated_at"     => updated_at.try(&.to_rfc3339),
         }
