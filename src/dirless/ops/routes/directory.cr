@@ -9,12 +9,32 @@ require "../models/node"
 module Dirless
   module Ops
     module Controllers
+      # Shared helper included by both directory snapshot controllers.
+      # Returns the customer's tenant_id, deriving and persisting it if needed.
+      # Priority: explicit tenant_id → HMAC(hmac_secret, aws_account_id) → generated random.
+      module DirectoryHelper
+        private def resolve_tenant_id(customer : Customer) : String?
+          if (tid = customer.tenant_id) && !tid.empty?
+            return tid
+          end
+          if (aid = customer.aws_account_id) && !aid.empty? && (secret = customer.hmac_secret)
+            return "aws___" + OpenSSL::HMAC.hexdigest(:sha256, secret, aid)
+          end
+          # Lazy-init: customer predates the tenant_id column. Generate, persist, and return one now.
+          new_tid = "aws___" + Random::Secure.hex(32)
+          customer.tenant_id = new_tid
+          customer.save
+          new_tid
+        end
+      end
+
       # GET /v1/customers/:name/directory/snapshot
       # Fetches the encrypted snapshot from the customer's backend and returns
       # it as a base64 string inside a JSON envelope: {"blob": "<base64>"}.
       # Returns 204 (no content) if the customer has no snapshot yet.
       class GetDirectorySnapshot
         include Grip::Controllers::HTTP
+        include DirectoryHelper
 
         def get(context : Context) : Context
           name = context.fetch_path_params["name"]
@@ -58,21 +78,6 @@ module Dirless
           end
         end
 
-        private def resolve_tenant_id(customer : Customer) : String?
-          if (tid = customer.tenant_id) && !tid.empty?
-            return tid
-          end
-          if (aid = customer.aws_account_id) && !aid.empty? && (secret = customer.hmac_secret)
-            return "aws___" + OpenSSL::HMAC.hexdigest(:sha256, secret, aid)
-          end
-          # Lazy-init: customer predates the tenant_id column (or was created before
-          # PortalRegister was updated). Generate, persist, and return one now.
-          new_tid = "aws___" + Random::Secure.hex(32)
-          customer.tenant_id = new_tid
-          customer.save
-          new_tid
-        end
-
         private def https_get(ip : String, port : Int32, hostname : String, path : String,
                               hmac_secret : String, tenant_id : String) : {Int32, String}
           tls = OpenSSL::SSL::Context::Client.new
@@ -97,6 +102,7 @@ module Dirless
       # customer's backend as an application/octet-stream POST to /v1/syncer/sync.
       class PushDirectorySnapshot
         include Grip::Controllers::HTTP
+        include DirectoryHelper
 
         def post(context : Context) : Context
           name = context.fetch_path_params["name"]
@@ -153,19 +159,6 @@ module Dirless
           rescue ex
             context.put_status(502).json({"error" => "backend unreachable: #{ex.message}"}).halt
           end
-        end
-
-        private def resolve_tenant_id(customer : Customer) : String?
-          if (tid = customer.tenant_id) && !tid.empty?
-            return tid
-          end
-          if (aid = customer.aws_account_id) && !aid.empty? && (secret = customer.hmac_secret)
-            return "aws___" + OpenSSL::HMAC.hexdigest(:sha256, secret, aid)
-          end
-          new_tid = "aws___" + Random::Secure.hex(32)
-          customer.tenant_id = new_tid
-          customer.save
-          new_tid
         end
 
         private def https_post(ip : String, port : Int32, hostname : String, path : String,

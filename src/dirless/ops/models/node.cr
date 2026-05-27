@@ -21,7 +21,6 @@ module Dirless
       column last_probed_at : Time?
       column probe_error : String?
       column services_json : String?
-      column syncthing_status_json : String?
       column probe_failure_count : Int32 = 0
       timestamps
 

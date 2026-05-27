@@ -61,10 +61,6 @@ module Dirless
             node.probe_error = nil
             node.probe_failure_count = 0
             node.services_json = fetch_services(node.ip)
-            node.syncthing_status_json = {
-              "completion" => data["syncthing_completion"]?,
-              "needBytes"  => data["syncthing_need_bytes"]?,
-            }.to_json if data["syncthing_completion"]?
             node.save
             Log.info { "Probe OK for #{node.name}" }
           rescue ex
