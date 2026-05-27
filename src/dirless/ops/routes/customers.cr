@@ -123,6 +123,7 @@ module Dirless
           parsed["aws_account_id"]?.try { |v| customer.aws_account_id = v.as_s? }
           parsed["notes"]?.try { |v| customer.notes = v.as_s? }
           parsed["tenant_id"]?.try { |v| customer.tenant_id = v.as_s? }
+          parsed["password"]?.try { |v| v.as_s?.try { |s| customer.password_hash = Customer.hash_password(s) } }
 
           unless customer.save
             return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
