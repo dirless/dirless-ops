@@ -78,7 +78,8 @@ module Dirless
           pending.sort_by { |j| j["created_at"].as_s? || "" }.each do |j|
             customer_name = j["customer_name"].as_s
             customer = api_get("/v1/customers/#{customer_name}") rescue next
-            next unless customer["email_verified"].as_bool? == true
+            next if customer["error"]?                              # customer was deleted
+            next unless customer["email_verified"]?.try(&.as_bool?) == true
 
             job_id = j["id"].as_i64
             # Claim it by marking in_progress.
