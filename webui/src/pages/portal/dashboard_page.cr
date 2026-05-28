@@ -94,7 +94,9 @@ class Portal::DashboardPage < PortalLayout
 
       if cs = @customer_status
         cs.nodes.each do |n|
-          total_users += n.user_count || 0
+          # user_count is the same on every Raft replica — only count the primary
+          # to avoid double (or triple) counting identical data.
+          total_users += n.user_count || 0 if n.is_primary
           ok_nodes    += 1 if n.status == "up"
           (n.agents || [] of Dirless::Ops::WebUI::AgentInfo).each do |agent|
             if (id = agent.agent_id)
@@ -270,12 +272,6 @@ HTML
                     td do
                       if node.is_primary
                         span "primary", class: "badge badge-muted"
-                      elsif (pct = node.syncthing_completion)
-                        if pct == 100
-                          span "In sync", class: "badge badge-ok"
-                        else
-                          span "Syncing #{pct}%", class: "badge badge-muted"
-                        end
                       elsif (lag = node.replication_lag_seconds)
                         lag_class = lag <= 120 ? "badge badge-ok" : "badge badge-error"
                         span format_lag(lag), class: lag_class

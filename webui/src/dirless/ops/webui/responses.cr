@@ -73,8 +73,6 @@ module Dirless
         property error : String?
         property checked_at : String?
         property service_state : String?
-        property syncthing_completion : Int32?
-        property syncthing_need_bytes : Int64?
       end
 
       struct CustomerStatusResponse
