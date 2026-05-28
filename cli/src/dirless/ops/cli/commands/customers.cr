@@ -78,6 +78,7 @@ module Dirless
             country = "US"
             plan = "free"
             verified = false
+            random_aws_account_id = false
 
             OptionParser.parse(args) do |opt|
               opt.banner = "Usage: dirless-ops-cli customers create [options]"
@@ -89,6 +90,7 @@ module Dirless
               opt.on("--country CODE", "ISO 3166-1 alpha-2 country code (default: US)") { |v| country = v.upcase }
               opt.on("--plan PLAN", "Plan: free, starter, growth, scale (default: free)") { |v| plan = v.downcase }
               opt.on("--verified", "Mark email as already verified (skips verification email)") { verified = true }
+              opt.on("--random-aws-account-id", "Generate a random 12-digit AWS account ID (useful for staging)") { random_aws_account_id = true }
               opt.on("-h", "--help", "Show help") { puts opt; exit 0 }
               opt.invalid_option { |flag| STDERR.puts "Unknown option: #{flag}"; STDERR.puts opt; exit 1 }
             end
@@ -126,14 +128,21 @@ module Dirless
             STDOUT.flush
             customer = client.post("/v1/portal/register", body)
             puts "done."
-            puts ""
 
+            aws_account_id = nil
+            if random_aws_account_id
+              aws_account_id = "%012d" % Random::Secure.rand(1_000_000_000_000_i64)
+              client.patch("/v1/customers/#{customer["name"].as_s}", {"aws_account_id" => aws_account_id})
+            end
+
+            puts ""
             puts "  Email:         #{customer["email"]}"
             puts "  Name:          #{customer["name"]}"
             puts "  Company:       #{customer["company"].as_s? || "-"}"
             puts "  Plan:          #{customer["plan"].as_s? || "free"}"
             puts "  Provisioned:   #{customer["provisioned"]}"
             puts "  Created:       #{customer["created_at"].as_s? || "-"}"
+            puts "  AWS Account ID: #{aws_account_id || "-"}"
 
             if generated_password
               puts ""
@@ -243,6 +252,7 @@ module Dirless
               dirless-ops-cli customers create
               dirless-ops-cli customers create --email alice@corp.com --first-name Alice \\
                 --last-name Smith --company Acme --country GB
+              dirless-ops-cli customers create --email test@staging.com --random-aws-account-id
               dirless-ops-cli --env prod customers create --email alice@corp.com
               dirless-ops-cli customers show ewmilnqiuhxu-5000
 
