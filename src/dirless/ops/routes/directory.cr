@@ -28,60 +28,13 @@ module Dirless
         end
       end
 
-      # GET /v1/customers/:name/directory/snapshot
-      # Fetches the encrypted snapshot from the customer's backend and returns
-      # it as a base64 string inside a JSON envelope: {"blob": "<base64>"}.
-      # Returns 204 (no content) if the customer has no snapshot yet.
-      class GetDirectorySnapshot
-        include Grip::Controllers::HTTP
-        include DirectoryHelper
-
-        def get(context : Context) : Context
-          name = context.fetch_path_params["name"]
-          customer = Customer.find_by(name: name)
-
-          unless customer
-            return context.put_status(404).json({"error" => "customer not found"}).halt
-          end
-
-          tenant_id = resolve_tenant_id(customer)
-          unless tenant_id
-            return context.put_status(422).json({
-              "error" => "tenant_id cannot be derived: set aws_account_id on customer or set tenant_id explicitly",
-            }).halt
-          end
-
-          primary_node = Node.all.find(&.is_primary)
-          unless primary_node
-            return context.put_status(503).json({"error" => "no primary node configured"}).halt
-          end
-
-          hostname = "#{customer.name}.dirless.com"
-          begin
-            status_code, body = https_get(
-              primary_node.ip, 443, hostname, "/v1/agent/snapshot",
-              customer.hmac_secret, tenant_id
-            )
-
-            case status_code
-            when 200
-              # Backend stores age ciphertext as base64 (same format the syncer writes).
-              # Pass through as-is — no extra encoding needed for JSON transport.
-              context.put_status(200).json({"blob" => body}).halt
-            when 404
-              context.put_status(204).halt
-            else
-              context.put_status(502).json({"error" => "backend returned HTTP #{status_code}"}).halt
-            end
-          rescue ex
-            context.put_status(502).json({"error" => "backend unreachable: #{ex.message}"}).halt
-          end
-        end
-
-        private def https_get(ip : String, port : Int32, hostname : String, path : String,
-                              hmac_secret : String, tenant_id : String) : {Int32, String}
+      # Shared HTTP helpers for proxying blob requests to the customer's backend.
+      module DirectoryHTTP
+        private def backend_get(ip : String, hostname : String,
+                                path : String, hmac_secret : String,
+                                tenant_id : String) : {Int32, String}
           tls = OpenSSL::SSL::Context::Client.new
-          client = Dirless::Net::TargetedClient.new(ip, hostname, port, tls)
+          client = Dirless::Net::TargetedClient.new(ip, hostname, 443, tls)
           client.connect_timeout = 10.seconds
           client.read_timeout = 30.seconds
           headers = HTTP::Headers{
@@ -95,29 +48,84 @@ module Dirless
             client.close rescue nil
           end
         end
-      end
 
-      # POST /v1/customers/:name/directory/snapshot
-      # Accepts {"blob": "<base64>"} (JSON), forwards the base64 string to the
-      # customer's backend as an application/octet-stream POST to /v1/syncer/sync.
-      class PushDirectorySnapshot
-        include Grip::Controllers::HTTP
-        include DirectoryHelper
+        private def backend_put(ip : String, hostname : String, path : String,
+                                hmac_secret : String, tenant_id : String,
+                                blob : String, *, recipient : String = "") : {Int32, String}
+          tls = OpenSSL::SSL::Context::Client.new
+          client = Dirless::Net::TargetedClient.new(ip, hostname, 443, tls)
+          client.connect_timeout = 10.seconds
+          client.read_timeout = 30.seconds
+          headers = HTTP::Headers{
+            "Authorization"       => "Bearer #{hmac_secret}",
+            "X-Tenant-ID"         => tenant_id,
+            "Content-Type"        => "application/octet-stream",
+            "X-Dirless-Recipient" => recipient,
+          }
+          begin
+            response = client.put(path, headers: headers, body: blob)
+            {response.status_code, response.body}
+          ensure
+            client.close rescue nil
+          end
+        end
 
-        def post(context : Context) : Context
-          name = context.fetch_path_params["name"]
+        # Common setup for directory snapshot controllers.
+        # Returns {customer, tenant_id, primary_node} or renders an error and returns nil.
+        private def resolve_context(context : HTTP::Server::Context, name : String) : {Customer, String, Node}?
           customer = Customer.find_by(name: name)
-
           unless customer
-            return context.put_status(404).json({"error" => "customer not found"}).halt
+            context.put_status(404).json({"error" => "customer not found"}).halt
+            return nil
           end
 
           tenant_id = resolve_tenant_id(customer)
           unless tenant_id
-            return context.put_status(422).json({
-              "error" => "tenant_id cannot be derived: set aws_account_id on customer or set tenant_id explicitly",
+            context.put_status(422).json({
+              "error" => "tenant_id cannot be derived: set aws_account_id or tenant_id on the customer",
             }).halt
+            return nil
           end
+
+          primary_node = Node.all.find(&.is_primary)
+          unless primary_node
+            context.put_status(503).json({"error" => "no primary node configured"}).halt
+            return nil
+          end
+
+          {customer, tenant_id, primary_node}
+        end
+
+        private def proxy_blob_get(context : HTTP::Server::Context, path : String) : HTTP::Server::Context
+          name = context.fetch_path_params["name"]
+          result = resolve_context(context, name)
+          return context unless result
+
+          customer, tenant_id, primary_node = result
+          hostname = "#{customer.name}.dirless.com"
+
+          begin
+            status_code, body = backend_get(primary_node.ip, hostname, path,
+                                            customer.hmac_secret, tenant_id)
+            case status_code
+            when 200
+              context.put_status(200).json({"blob" => body}).halt
+            when 404
+              context.put_status(204).halt
+            else
+              context.put_status(502).json({"error" => "backend returned HTTP #{status_code}"}).halt
+            end
+          rescue ex
+            context.put_status(502).json({"error" => "backend unreachable: #{ex.message}"}).halt
+          end
+        end
+
+        private def proxy_blob_put(context : HTTP::Server::Context, path : String) : HTTP::Server::Context
+          name = context.fetch_path_params["name"]
+          result = resolve_context(context, name)
+          return context unless result
+
+          customer, tenant_id, primary_node = result
 
           body = context.request.body.try(&.gets_to_end) || ""
           begin
@@ -131,26 +139,15 @@ module Dirless
             return context.put_status(422).json({"error" => "blob field is required"}).halt
           end
 
-          recipient = parsed["recipient"]?.try(&.as_s)
-          unless recipient && !recipient.empty?
-            return context.put_status(422).json({"error" => "recipient field is required — include the age public key"}).halt
-          end
-
-          # blob_b64 is base64-encoded age ciphertext. The backend's syncer/sync endpoint
-          # expects base64 (same as what dirless-syncer writes). Pass through as-is.
-          primary_node = Node.all.find(&.is_primary)
-          unless primary_node
-            return context.put_status(503).json({"error" => "no primary node configured"}).halt
-          end
+          recipient = parsed["recipient"]?.try(&.as_s) || ""
 
           hostname = "#{customer.name}.dirless.com"
           begin
-            status_code, response_body = https_post(
-              primary_node.ip, 443, hostname, "/v1/syncer/sync",
+            status_code, response_body = backend_put(
+              primary_node.ip, hostname, path,
               customer.hmac_secret, tenant_id, blob_b64,
               recipient: recipient,
             )
-
             if status_code == 200
               context.put_status(200).json({"status" => "ok"}).halt
             else
@@ -160,26 +157,61 @@ module Dirless
             context.put_status(502).json({"error" => "backend unreachable: #{ex.message}"}).halt
           end
         end
+      end
 
-        private def https_post(ip : String, port : Int32, hostname : String, path : String,
-                               hmac_secret : String, tenant_id : String, blob : String,
-                               *, recipient : String = "") : {Int32, String}
-          tls = OpenSSL::SSL::Context::Client.new
-          client = Dirless::Net::TargetedClient.new(ip, hostname, port, tls)
-          client.connect_timeout = 10.seconds
-          client.read_timeout = 30.seconds
-          headers = HTTP::Headers{
-            "Authorization"       => "Bearer #{hmac_secret}",
-            "X-Tenant-ID"         => tenant_id,
-            "Content-Type"        => "application/octet-stream",
-            "X-Dirless-Recipient" => recipient,
-          }
-          begin
-            response = client.post(path, headers: headers, body: blob)
-            {response.status_code, response.body}
-          ensure
-            client.close rescue nil
-          end
+      # GET /v1/customers/:name/directory/snapshot/aws-identity-center
+      # Fetches the cloud-sourced (read-only) encrypted snapshot blob.
+      # Returns {"blob": "<base64>"} or 204 if no snapshot yet.
+      class GetCloudSnapshot
+        include Grip::Controllers::HTTP
+        include DirectoryHelper
+        include DirectoryHTTP
+
+        def get(context : Context) : Context
+          proxy_blob_get(context, "/v1/snapshot/aws-identity-center")
+        end
+      end
+
+      # GET /v1/customers/:name/directory/snapshot/local
+      # Fetches the portal-managed local users encrypted snapshot blob.
+      # Returns {"blob": "<base64>"} or 204 if no local snapshot yet.
+      class GetLocalSnapshot
+        include Grip::Controllers::HTTP
+        include DirectoryHelper
+        include DirectoryHTTP
+
+        def get(context : Context) : Context
+          proxy_blob_get(context, "/v1/snapshot/local")
+        end
+      end
+
+      # POST /v1/customers/:name/directory/snapshot/local
+      # Accepts {"blob": "<base64>", "recipient": "<age public key>"} and
+      # PUTs the encrypted blob to the customer's backend as the local snapshot.
+      # This is the only blob the portal is allowed to write.
+      class PushLocalSnapshot
+        include Grip::Controllers::HTTP
+        include DirectoryHelper
+        include DirectoryHTTP
+
+        def post(context : Context) : Context
+          proxy_blob_put(context, "/v1/snapshot/local")
+        end
+      end
+
+      # Legacy alias kept for backward compatibility. Previously wrote to the
+      # cloud blob (/v1/syncer/sync) — now redirected to the local blob so that
+      # manually-added users are preserved across syncer cycles.
+      # Remove once all portal clients are on the new paths.
+      GetDirectorySnapshot = GetCloudSnapshot
+
+      class PushDirectorySnapshot
+        include Grip::Controllers::HTTP
+        include DirectoryHelper
+        include DirectoryHTTP
+
+        def post(context : Context) : Context
+          proxy_blob_put(context, "/v1/snapshot/local")
         end
       end
     end

@@ -99,25 +99,32 @@ module Dirless
           post("/v1/portal/resend-verification", {"customer_name" => customer_name})
         end
 
-        # Returns the base64-encoded encrypted snapshot blob for the given customer,
-        # or nil if no snapshot exists yet (HTTP 204 from the ops API).
-        def fetch_directory_snapshot(customer_name : String) : String?
-          response = HTTP::Client.get(
-            "#{@url}/v1/customers/#{customer_name}/directory/snapshot",
-            headers: auth_headers
-          )
+        # Returns the base64-encoded cloud-sourced (aws-identity-center) snapshot blob,
+        # or nil if no cloud snapshot exists yet (HTTP 204).
+        def fetch_cloud_snapshot(customer_name : String) : String?
+          fetch_blob("/v1/customers/#{customer_name}/directory/snapshot/aws-identity-center")
+        end
+
+        # Returns the base64-encoded portal-managed local users snapshot blob,
+        # or nil if no local snapshot has been written yet (HTTP 204).
+        def fetch_local_snapshot(customer_name : String) : String?
+          fetch_blob("/v1/customers/#{customer_name}/directory/snapshot/local")
+        end
+
+        # Pushes a base64-encoded encrypted local users blob to the customer's backend.
+        # The *recipient* is the age public key used to encrypt the blob.
+        def push_local_snapshot(customer_name : String, blob_b64 : String, recipient : String = "") : Nil
+          payload = {"blob" => blob_b64}
+          payload["recipient"] = recipient unless recipient.empty?
+          post("/v1/customers/#{customer_name}/directory/snapshot/local", payload)
+        end
+
+        private def fetch_blob(path : String) : String?
+          response = HTTP::Client.get("#{@url}#{path}", headers: auth_headers)
           return nil if response.status_code == 204
           check!(response)
           parsed = JSON.parse(response.body)
           parsed["blob"]?.try(&.as_s)
-        end
-
-        # Pushes a base64-encoded encrypted snapshot blob to the customer's backend.
-        # The *recipient* is the age public key that was used to encrypt the blob.
-        def push_directory_snapshot(customer_name : String, blob_b64 : String, recipient : String = "") : Nil
-          payload = {"blob" => blob_b64}
-          payload["recipient"] = recipient unless recipient.empty?
-          post("/v1/customers/#{customer_name}/directory/snapshot", payload)
         end
 
         private def get(path : String) : String
