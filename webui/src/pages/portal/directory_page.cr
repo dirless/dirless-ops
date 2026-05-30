@@ -164,7 +164,7 @@ class Portal::DirectoryPage < PortalLayout
       end
     end
 
-    form id: "submit-form", action: "/directory", method: "post", class: "hidden" do
+    form id: "submit-form", action: "/directory", method: "post", enctype: "multipart/form-data", class: "hidden" do
       input type: "hidden", name: "blob", id: "blob-input"
       input type: "hidden", name: "recipient", id: "recipient-input"
     end
@@ -461,6 +461,15 @@ document.getElementById("new-username").addEventListener("keydown", e => {
   if (e.key === "Enter") handleAddUser();
 });
 JAVASCRIPT
+    raw %q(
+// Sort users alphabetically before rendering
+const __origRenderAll = renderAll;
+renderAll = function() {
+  cloudUsers.sort((a, b) => a.username.localeCompare(b.username));
+  localUsers.sort((a, b) => a.username.localeCompare(b.username));
+  __origRenderAll();
+};
+)
     end
   end
 

@@ -118,6 +118,7 @@ module Dirless
           end
 
           parsed["label"]?.try { |v| customer.label = v.as_s? }
+          parsed["email"]?.try { |v| customer.email = v.as_s? }
           parsed["company"]?.try { |v| customer.company = v.as_s? }
           parsed["hmac_secret"]?.try { |v| v.as_s?.try { |s| customer.hmac_secret = s } }
           parsed["aws_account_id"]?.try { |v| customer.aws_account_id = v.as_s? }
