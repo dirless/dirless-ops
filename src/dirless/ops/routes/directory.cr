@@ -14,13 +14,22 @@ module Dirless
       # Priority: explicit tenant_id → HMAC(hmac_secret, aws_account_id) → generated random.
       module DirectoryHelper
         private def resolve_tenant_id(customer : Customer) : String?
+          # When aws_account_id is known the canonical tenant_id is always
+          # HMAC(hmac_secret, aws_account_id). Update the stored value if it
+          # doesn't match — this heals stale lazy-generated IDs from before
+          # aws_account_id was populated.
+          if (aid = customer.aws_account_id) && !aid.empty? && (secret = customer.hmac_secret)
+            canonical = "aws___" + OpenSSL::HMAC.hexdigest(:sha256, secret, aid)
+            if customer.tenant_id != canonical
+              customer.tenant_id = canonical
+              customer.save
+            end
+            return canonical
+          end
           if (tid = customer.tenant_id) && !tid.empty?
             return tid
           end
-          if (aid = customer.aws_account_id) && !aid.empty? && (secret = customer.hmac_secret)
-            return "aws___" + OpenSSL::HMAC.hexdigest(:sha256, secret, aid)
-          end
-          # Lazy-init: customer predates the tenant_id column. Generate, persist, and return one now.
+          # Lazy-init: no aws_account_id yet. Generate, persist, and return one now.
           new_tid = "aws___" + Random::Secure.hex(32)
           customer.tenant_id = new_tid
           customer.save

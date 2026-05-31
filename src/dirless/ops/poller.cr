@@ -65,6 +65,20 @@ module Dirless
             data_updated_at = parsed["data_updated_at"]?.try(&.as_s?).try { |s| Time.parse_rfc3339(s) rescue nil }
             active_agents = parsed["active_agents"]?.try(&.as_i?)
             agents_json = parsed["agents"]?.try(&.to_json)
+
+            if (reported_id = parsed["aws_account_id"]?.try(&.as_s?))
+              stored_id = customer.aws_account_id
+              if stored_id.nil? || stored_id.empty?
+                canonical_tid = "aws___" + OpenSSL::HMAC.hexdigest(:sha256, customer.hmac_secret, reported_id)
+                customer.aws_account_id = reported_id
+                customer.tenant_id = canonical_tid
+                customer.save
+                Log.info { "poller: stored aws_account_id=#{reported_id} tenant_id=#{canonical_tid} for customer #{customer.name}" }
+              elsif stored_id != reported_id
+                Log.error { "poller: aws_account_id conflict for customer #{customer.name}: " \
+                             "stored=#{stored_id}, reported=#{reported_id}" }
+              end
+            end
           end
 
           hc = HealthCheck.new(

@@ -28,6 +28,11 @@ build-cli:
 build-cli-debug:
     cd cli && crystal build src/dirless_ops_cli.cr -o dirless-ops-cli
 
+# Symlink keypass-tool.sh to /usr/local/bin/keypass-tool.sh
+install-keypass-tool:
+    sudo ln -sf "$(pwd)/keypass-tool.sh" /usr/local/bin/keypass-tool.sh
+    @echo "Symlinked: /usr/local/bin/keypass-tool.sh → $(pwd)/keypass-tool.sh"
+
 # Install the CLI to /usr/local/bin (run after build-cli)
 install-cli: build-cli
     sudo install -m 755 cli/dirless-ops-cli /usr/local/bin/dirless-ops-cli
