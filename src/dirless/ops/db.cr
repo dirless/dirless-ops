@@ -157,6 +157,20 @@ module Dirless
       )
 
       db = Granite::Connections["sqlite"].not_nil![:writer].database
+
+      # Self-heal corrupted nodes table. The TPDB v0.8.6 leaf-page-bloat bug
+      # could corrupt row data after DELETE+INSERT cycles. If reading any row
+      # raises ColumnTypeMismatchError, drop the table so SCHEMA_STATEMENTS
+      # can recreate it cleanly. Node data is repopulated by register-ops.yml.
+      begin
+        db.query("SELECT name FROM nodes") { |rs| rs.each { rs.read(String) } }
+      rescue DB::ColumnTypeMismatchError
+        Log.warn { "nodes table has corrupted rows — dropping and recreating (TPDB leaf-page-bloat repair)" }
+        db.exec("DROP TABLE IF EXISTS nodes")
+      rescue DB::Error
+        # Table doesn't exist yet — SCHEMA_STATEMENTS will create it.
+      end
+
       SCHEMA_STATEMENTS.each do |sql|
         db.exec(sql)
       rescue ex : Exception

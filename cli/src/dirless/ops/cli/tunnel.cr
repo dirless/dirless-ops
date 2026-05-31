@@ -65,6 +65,7 @@ module Dirless
             "-o", "ExitOnForwardFailure=yes",
             "-o", "BatchMode=yes",
             "-o", "ConnectTimeout=10",
+            "-o", "IdentitiesOnly=yes",
           ]
           args << "#{user}@#{host}"
 

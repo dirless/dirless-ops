@@ -113,6 +113,7 @@ module Dirless
               "-o", "StrictHostKeyChecking=accept-new",
               "-o", "BatchMode=yes",
               "-o", "ConnectTimeout=10",
+              "-o", "IdentitiesOnly=yes",
               "#{user}@#{host}",
               "awk -F'\"' '/^key =/{print $2; exit}' #{REMOTE_CONFIG}",
             ],
