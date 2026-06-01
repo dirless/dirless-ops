@@ -25,6 +25,7 @@ class Customers::ShowPage < MainLayout
 
     div class: "bg-white rounded-lg shadow-sm border border-gray-200 divide-y divide-gray-100 mb-8" do
       field_row("Name", customer.name, mono: true)
+      field_row("Email", customer.email || "-")
       field_row("Company", customer.company || "-")
       field_row("Port", customer.port.to_s)
       field_row("AWS Account ID", customer.aws_account_id || "-")

@@ -29,7 +29,7 @@ class Portal::LoginPage
               end
             end
 
-            form action: "/login", method: "post" do
+            form action: "/login", method: "post", novalidate: "novalidate" do
               div class: "form-group" do
                 label "Email", for: "email", class: "form-label"
                 input type: "email", id: "email", name: "email",

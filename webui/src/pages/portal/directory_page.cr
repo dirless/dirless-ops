@@ -2,6 +2,7 @@ class Portal::DirectoryPage < PortalLayout
   needs cloud_snapshot_blob : String?
   needs local_snapshot_blob : String?
   needs backend_error : String? = nil
+  needs provisioned : Bool = true
 
   # UIDs/GIDs for locally-added users start above this floor so they never
   # collide with IAM Identity Center-allocated IDs (which start at 1000).
@@ -20,6 +21,13 @@ class Portal::DirectoryPage < PortalLayout
   def content
     raw "<style>#{dir_css}</style>"
 
+    unless @provisioned
+      div class: "banner banner-info" do
+        text "⚙ Your backend is being provisioned. This usually takes a few minutes — check back shortly."
+      end
+      return
+    end
+
     if (err = @backend_error)
       div class: "banner banner-error" do
         text "⚠ Could not reach backend: #{err}"
@@ -29,7 +37,8 @@ class Portal::DirectoryPage < PortalLayout
     div class: "banner banner-info" do
       text "Manage your Dirless directory. "
       strong "Your private key never leaves the browser"
-      text " — decryption and re-encryption happen locally."
+      text " — decryption and re-encryption happen locally. "
+      a "Don't have a key? Learn how to generate one →", href: "https://dirless.com/age-keypair.html", target: "_blank"
     end
 
     # Step 1: Private key
@@ -358,6 +367,20 @@ async function handleDecrypt() {
   const keyText = document.getElementById("private-key-input").value.trim();
   if (!keyText) {
     setStatus("decrypt-status", "Enter your private key first.", "status-error");
+    return;
+  }
+  if (!keyText.startsWith("AGE-SECRET-KEY-1")) {
+    setStatus("decrypt-status", "Invalid key: must start with AGE-SECRET-KEY-1", "status-error");
+    return;
+  }
+  if (keyText.length !== 74) {
+    setStatus("decrypt-status", `Invalid key: expected 74 characters, got ${keyText.length}`, "status-error");
+    return;
+  }
+  try {
+    await age.identityToRecipient(keyText);
+  } catch (err) {
+    setStatus("decrypt-status", "Invalid key: " + err.message, "status-error");
     return;
   }
   setStatus("decrypt-status", "Decrypting…", "status-muted");

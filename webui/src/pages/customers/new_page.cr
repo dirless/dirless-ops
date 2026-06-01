@@ -30,6 +30,7 @@ class Customers::NewPage < MainLayout
           end
         end
 
+        field("Email", "email", placeholder: "admin@example.com", required: true)
         field("Company", "company", placeholder: "Acme Corp")
         field("AWS Account ID", "aws_account_id", placeholder: "123456789012")
         textarea_field("Notes", "notes")

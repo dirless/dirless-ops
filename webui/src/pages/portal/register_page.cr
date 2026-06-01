@@ -50,7 +50,7 @@ class Portal::RegisterPage
               end
             end
 
-            form action: "/register", method: "post" do
+            form action: "/register", method: "post", novalidate: "novalidate" do
               div class: "form-row" do
                 div class: "form-group" do
                   label "First name", for: "first_name", class: "form-label"
