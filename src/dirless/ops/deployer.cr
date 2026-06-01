@@ -10,15 +10,18 @@ module Dirless
       class Runner
         @ansible_inventory : String
         @ansible_playbook : String
+        @deprovision_playbook : String?
         @api_url : String
 
         def initialize(@config : Config, @notifier : Notifier)
           @ansible_inventory = @config.ansible_inventory || raise "deployer.ansible_inventory not set in config"
           @ansible_playbook = @config.ansible_playbook || raise "deployer.ansible_playbook not set in config"
           @api_url = "http://#{@config.host}:#{@config.port}"
+          @deprovision_playbook = @config.deprovision_playbook
         end
 
         def run
+          run_deprovision
           job_data = claim_next_job
           unless job_data
             Log.info { "No pending provision jobs" }
@@ -47,6 +50,77 @@ module Dirless
             api_patch("/v1/provision-jobs/#{job_id}", {"status" => "failed", "error" => truncated})
             Log.error { "Provision job ##{job_id} failed: #{truncated}" }
           end
+        end
+
+        def run_deprovision
+          playbook = @deprovision_playbook
+          unless playbook
+            Log.debug { "deprovision_playbook not configured — skipping deprovision spool check" }
+            return
+          end
+
+          spool_dir = @config.deprovision_spool_dir
+          return unless Dir.exists?(spool_dir)
+
+          Dir.glob(File.join(spool_dir, "*.json")).each do |spool_file|
+            raw = File.read(spool_file)
+            data = JSON.parse(raw)
+            customer_name = data["customer_name"].as_s
+
+            Log.info { "Processing deprovision spool for customer #{customer_name}" }
+            success, output = run_deprovision_ansible(customer_name, playbook)
+
+            if success
+              File.delete(spool_file)
+              Log.info { "Deprovision of #{customer_name} completed — spool file removed" }
+            else
+              Log.error { "Deprovision of #{customer_name} failed: #{output}" }
+            end
+          rescue ex
+            Log.error { "Error processing deprovision spool #{spool_file}: #{ex.message}" }
+          end
+        end
+
+        def run_deprovision_ansible(customer_name : String, playbook : String) : {Bool, String}
+          vars_json = {"customer_name" => customer_name}.to_json
+          tmp_vars = "/tmp/dirless-deprovision-#{Random::Secure.hex(8)}.json"
+          File.write(tmp_vars, vars_json)
+          File.chmod(tmp_vars, 0o600)
+
+          args = ["-i", @ansible_inventory, playbook, "-e", "@#{tmp_vars}", "--diff"]
+
+          output = IO::Memory.new
+          timed_out = false
+          process = Process.new(
+            "ansible-playbook",
+            args: args,
+            input: Process::Redirect::Close,
+            output: output,
+            error: output,
+          )
+
+          spawn do
+            sleep ANSIBLE_TIMEOUT
+            unless process.terminated?
+              timed_out = true
+              process.signal(Signal::TERM)
+              sleep 10.seconds
+              process.signal(Signal::KILL) unless process.terminated?
+            end
+          end
+
+          status = process.wait
+          result = output.to_s
+          truncated = result.size > 4096 ? result[-4096..] : result
+          if timed_out
+            {false, "ansible-playbook timed out after #{ANSIBLE_TIMEOUT.total_minutes.to_i} minutes\n#{truncated}"}
+          else
+            {status.success?, truncated}
+          end
+        rescue ex : Exception
+          {false, ex.message || "unknown error"}
+        ensure
+          File.delete(tmp_vars) rescue nil if tmp_vars
         end
 
         ANSIBLE_TIMEOUT  = 3.minutes

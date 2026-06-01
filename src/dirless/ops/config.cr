@@ -11,6 +11,7 @@ module Dirless
       getter ansible_inventory : String?
       getter ansible_playbook : String?
       getter ansible_ops_url : String?
+      getter deprovision_playbook : String?
       getter mail_spool_dir : String
       getter ops_alert_email : String?
       getter deprovision_spool_dir : String
@@ -33,6 +34,7 @@ module Dirless
           @ansible_inventory = deployer["ansible_inventory"]?.try(&.as_s)
           @ansible_playbook = deployer["ansible_playbook"]?.try(&.as_s)
           @ansible_ops_url = deployer["ansible_ops_url"]?.try(&.as_s)
+          @deprovision_playbook = deployer["deprovision_playbook"]?.try(&.as_s)
         end
 
         @mail_spool_dir = toml["notifications"]?.try(&.["mail_spool_dir"]?.try(&.as_s)) ||
