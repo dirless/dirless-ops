@@ -12,7 +12,22 @@ module Dirless
       PROBE                 = "/usr/local/bin/dirless-probe"
       PROBE_ALERT_THRESHOLD = 3
 
+      PROBE_INTERVAL = 5.minutes
+
       def initialize(@config : Config, @notifier : Notifier)
+      end
+
+      def start
+        spawn do
+          loop do
+            begin
+              run
+            rescue ex
+              Log.error(exception: ex) { "node probe cycle failed" }
+            end
+            sleep PROBE_INTERVAL
+          end
+        end
       end
 
       def run

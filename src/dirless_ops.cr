@@ -21,11 +21,6 @@ require "./dirless/ops/node_prober"
 
 _notifier = Dirless::Ops::Notifier.new(_config.mail_spool_dir, _config.ops_alert_email)
 
-if ARGV.includes?("--probe-nodes")
-  Dirless::Ops::NodeProber.new(_config, _notifier).run
-  exit 0
-end
-
 # In --deploy mode, run the deployer and exit (used by systemd timer).
 if ARGV.includes?("--deploy")
   runner = Dirless::Ops::Deployer::Runner.new(_config, _notifier)
@@ -154,6 +149,7 @@ module Dirless
     end
 
     Poller.new(_config.polling_interval_seconds).start
+    NodeProber.new(_config, _notifier).start
 
     app = Application.new(_config.api_key)
     app.host = _config.host
