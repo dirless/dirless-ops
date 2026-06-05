@@ -11,11 +11,11 @@ require "./dirless/ops/config"
 require "./dirless/ops/db"
 require "./dirless/ops/models/customer"
 
-config_path = if (idx = ARGV.index("--config"))
-               ARGV[idx + 1]
-             else
-               ENV.fetch("DIRLESS_OPS_CONFIG", "/etc/dirless-ops/dirless-ops.toml")
-             end
+config_path = if idx = ARGV.index("--config")
+                ARGV[idx + 1]
+              else
+                ENV.fetch("DIRLESS_OPS_CONFIG", "/etc/dirless-ops/dirless-ops.toml")
+              end
 
 puts "Loading config from #{config_path}"
 config = Dirless::Ops::Config.load(config_path)

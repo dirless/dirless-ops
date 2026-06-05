@@ -66,7 +66,7 @@ module Dirless
         end
 
         def customer_status(name : String) : CustomerStatusResponse?
-          status.find { |c| c.name == name }
+          status.find { |customer| customer.name == name }
         end
 
         def portal_register(email : String, password : String, first_name : String, last_name : String, company : String, country : String) : CustomerResponse

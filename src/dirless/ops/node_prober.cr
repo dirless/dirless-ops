@@ -68,7 +68,7 @@ module Dirless
           begin
             data = JSON.parse(stdout.to_s.strip)
             node.cpu_count = data["cpu_count"]?.try(&.as_i?)
-            node.memory_gb = data["total_memory_mb"]?.try(&.as_i?).try { |m| (m / 1024.0).ceil.to_i }
+            node.memory_gb = data["total_memory_mb"]?.try(&.as_i?).try { |megabytes| (megabytes / 1024.0).ceil.to_i }
             node.free_memory_mb = data["free_memory_mb"]?.try(&.as_i?)
             node.load_5m = data["load_5m"]?.try(&.as_f?)
             node.free_disk_gb = data["free_disk_gb"]?.try(&.as_i?)
@@ -96,6 +96,7 @@ module Dirless
           end
         end
       end
+
       # Returns a JSON string mapping customer_name → active state, e.g.
       # {"xyz-5001":"active","abc-5000":"inactive"}
       private def fetch_services(ip : String) : String
@@ -128,8 +129,6 @@ module Dirless
       rescue
         "{}"
       end
-
+    end
   end
 end
-end
-

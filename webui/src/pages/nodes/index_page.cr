@@ -39,10 +39,10 @@ class Nodes::IndexPage < MainLayout
               td node.ip, class: "px-6 py-3 font-mono text-xs text-gray-600"
               td node.region, class: "px-6 py-3 text-gray-700"
               td node.provider, class: "px-6 py-3 text-gray-500"
-              td node.cpu_count.try { |c| "#{c} cores" } || "—", class: "px-6 py-3 text-gray-500"
-              td node.memory_gb.try { |m| "#{m} GB" } || "—", class: "px-6 py-3 text-gray-500"
-              td node.free_disk_gb.try { |d| "#{d} GB" } || "—", class: "px-6 py-3 text-gray-500"
-              td node.load_5m.try { |l| l.round(2).to_s } || "—", class: "px-6 py-3 text-gray-500"
+              td node.cpu_count.try { |count| "#{count} cores" } || "—", class: "px-6 py-3 text-gray-500"
+              td node.memory_gb.try { |gigabytes| "#{gigabytes} GB" } || "—", class: "px-6 py-3 text-gray-500"
+              td node.free_disk_gb.try { |gigabytes| "#{gigabytes} GB" } || "—", class: "px-6 py-3 text-gray-500"
+              td node.load_5m.try(&.round(2).to_s) || "—", class: "px-6 py-3 text-gray-500"
               td class: "px-6 py-3" do
                 if node.is_primary
                   span "yes", class: "bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs"

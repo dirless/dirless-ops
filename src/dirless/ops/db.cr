@@ -129,19 +129,19 @@ module Dirless
       # Backfill account data from customer_accounts into customers.
       # Uses correlated subqueries; silently skipped if customer_accounts doesn't exist.
       "UPDATE customers SET " \
-        "email = (SELECT email FROM customer_accounts WHERE customer_name = customers.name), " \
-        "password_hash = (SELECT password_hash FROM customer_accounts WHERE customer_name = customers.name), " \
-        "first_name = (SELECT first_name FROM customer_accounts WHERE customer_name = customers.name), " \
-        "last_name = (SELECT last_name FROM customer_accounts WHERE customer_name = customers.name), " \
-        "company = (SELECT company FROM customer_accounts WHERE customer_name = customers.name), " \
-        "country = (SELECT country FROM customer_accounts WHERE customer_name = customers.name), " \
-        "provisioned = (SELECT provisioned FROM customer_accounts WHERE customer_name = customers.name), " \
-        "email_verified = (SELECT email_verified FROM customer_accounts WHERE customer_name = customers.name), " \
-        "email_verify_token = (SELECT email_verify_token FROM customer_accounts WHERE customer_name = customers.name), " \
-        "stripe_customer_id = (SELECT stripe_customer_id FROM customer_accounts WHERE customer_name = customers.name), " \
-        "beta_customer = (SELECT beta_customer FROM customer_accounts WHERE customer_name = customers.name), " \
-        "plan = (SELECT plan FROM customer_accounts WHERE customer_name = customers.name) " \
-        "WHERE EXISTS (SELECT 1 FROM customer_accounts WHERE customer_name = customers.name)",
+      "email = (SELECT email FROM customer_accounts WHERE customer_name = customers.name), " \
+      "password_hash = (SELECT password_hash FROM customer_accounts WHERE customer_name = customers.name), " \
+      "first_name = (SELECT first_name FROM customer_accounts WHERE customer_name = customers.name), " \
+      "last_name = (SELECT last_name FROM customer_accounts WHERE customer_name = customers.name), " \
+      "company = (SELECT company FROM customer_accounts WHERE customer_name = customers.name), " \
+      "country = (SELECT country FROM customer_accounts WHERE customer_name = customers.name), " \
+      "provisioned = (SELECT provisioned FROM customer_accounts WHERE customer_name = customers.name), " \
+      "email_verified = (SELECT email_verified FROM customer_accounts WHERE customer_name = customers.name), " \
+      "email_verify_token = (SELECT email_verify_token FROM customer_accounts WHERE customer_name = customers.name), " \
+      "stripe_customer_id = (SELECT stripe_customer_id FROM customer_accounts WHERE customer_name = customers.name), " \
+      "beta_customer = (SELECT beta_customer FROM customer_accounts WHERE customer_name = customers.name), " \
+      "plan = (SELECT plan FROM customer_accounts WHERE customer_name = customers.name) " \
+      "WHERE EXISTS (SELECT 1 FROM customer_accounts WHERE customer_name = customers.name)",
       # Backfill company from legacy label column for admin-created customers.
       "UPDATE customers SET company = label WHERE company IS NULL AND label IS NOT NULL",
       # Migration: track how many times a provision job has been auto-reset due to timeout.

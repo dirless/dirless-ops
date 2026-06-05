@@ -62,7 +62,7 @@ module Dirless
             parsed = JSON.parse(body)
             tenant_count = parsed["tenants"]?.try(&.as_i?)
             user_count = parsed["users"]?.try(&.as_i?)
-            data_updated_at = parsed["data_updated_at"]?.try(&.as_s?).try { |s| Time.parse_rfc3339(s) rescue nil }
+            data_updated_at = parsed["data_updated_at"]?.try(&.as_s?).try { |str| Time.parse_rfc3339(str) rescue nil }
             active_agents = parsed["active_agents"]?.try(&.as_i?)
             agents_json = parsed["agents"]?.try(&.to_json)
 

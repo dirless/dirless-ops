@@ -48,7 +48,7 @@ module Dirless
           end
 
           unless errors.empty?
-            return context.put_status(422).json({"error" => errors.map { |f, m| "#{f}: #{m}" }.join("; "), "fields" => errors}).halt
+            return context.put_status(422).json({"error" => errors.map { |field, message| "#{field}: #{message}" }.join("; "), "fields" => errors}).halt
           end
 
           if Customer.where(name: name).exists?
@@ -56,7 +56,7 @@ module Dirless
           end
 
           explicit_tenant_id = parsed["tenant_id"]?.try(&.as_s)
-          aws_id             = parsed["aws_account_id"]?.try(&.as_s)
+          aws_id = parsed["aws_account_id"]?.try(&.as_s)
 
           # For non-AWS customers (no aws_account_id) generate a stable tenant_id
           # now so the directory feature always has one to work with.
@@ -120,11 +120,11 @@ module Dirless
           parsed["label"]?.try { |v| customer.label = v.as_s? }
           parsed["email"]?.try { |v| customer.email = v.as_s? }
           parsed["company"]?.try { |v| customer.company = v.as_s? }
-          parsed["hmac_secret"]?.try { |v| v.as_s?.try { |s| customer.hmac_secret = s } }
+          parsed["hmac_secret"]?.try { |v| v.as_s?.try { |str| customer.hmac_secret = str } }
           parsed["aws_account_id"]?.try { |v| customer.aws_account_id = v.as_s? }
           parsed["notes"]?.try { |v| customer.notes = v.as_s? }
           parsed["tenant_id"]?.try { |v| customer.tenant_id = v.as_s? }
-          parsed["password"]?.try { |v| v.as_s?.try { |s| customer.password_hash = Customer.hash_password(s) } }
+          parsed["password"]?.try { |v| v.as_s?.try { |str| customer.password_hash = Customer.hash_password(str) } }
 
           unless customer.save
             return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt

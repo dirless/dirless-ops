@@ -2,7 +2,7 @@ class Portal::CreateSession < Lucky::Action
   accepted_formats [:html]
 
   post "/login" do
-    email    = params.get?(:email).to_s.strip
+    email = params.get?(:email).to_s.strip
     password = params.get?(:password).to_s
 
     begin

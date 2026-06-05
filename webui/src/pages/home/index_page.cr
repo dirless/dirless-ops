@@ -74,7 +74,7 @@ class Home::IndexPage < MainLayout
   end
 
   private def sync_badge(nodes : Array(Dirless::Ops::WebUI::NodeStatusResponse))
-    up_nodes = nodes.select { |n| n.status == "up" }
+    up_nodes = nodes.select { |node| node.status == "up" }
     return if up_nodes.size < 2
 
     max_lag = up_nodes.compact_map(&.replication_lag_seconds).max?
@@ -87,8 +87,8 @@ class Home::IndexPage < MainLayout
       end
     else
       # Fall back to count comparison when lag data not yet available
-      enrolled_counts = up_nodes.map(&.tenant_count).compact.uniq
-      user_counts     = up_nodes.map(&.user_count).compact.uniq
+      enrolled_counts = up_nodes.compact_map(&.tenant_count).uniq!
+      user_counts = up_nodes.compact_map(&.user_count).uniq!
       return if enrolled_counts.size == 0 && user_counts.size == 0
       in_sync = enrolled_counts.size <= 1 && user_counts.size <= 1
       if in_sync
@@ -100,7 +100,7 @@ class Home::IndexPage < MainLayout
   end
 
   private def agents_badge(node : Dirless::Ops::WebUI::NodeStatusResponse)
-    if (count = node.active_agents)
+    if count = node.active_agents
       css = count > 0 ? "text-gray-900 font-medium" : "text-gray-400"
       span count.to_s, class: css
     else
@@ -111,7 +111,7 @@ class Home::IndexPage < MainLayout
   private def lag_badge(node : Dirless::Ops::WebUI::NodeStatusResponse)
     if node.is_primary
       span "primary", class: "text-xs text-gray-400"
-    elsif (lag = node.replication_lag_seconds)
+    elsif lag = node.replication_lag_seconds
       css = lag <= 120 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
       span format_lag(lag), class: "px-2 py-0.5 rounded text-xs font-medium #{css}"
     else

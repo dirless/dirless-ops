@@ -57,7 +57,7 @@ class Portal::RegisterPage
                   input type: "text", id: "first_name", name: "first_name",
                     value: @values["first_name"]? || "",
                     autofocus: "autofocus", autocomplete: "given-name", required: "required",
-                    class: "form-input #{"form-input-error" unless (@errors["first_name"]?.nil?)}",
+                    class: "form-input #{"form-input-error" unless @errors["first_name"]?.nil?}",
                     placeholder: "Jane"
                   if err = @errors["first_name"]?
                     span err, class: "field-error"
@@ -69,7 +69,7 @@ class Portal::RegisterPage
                   input type: "text", id: "last_name", name: "last_name",
                     value: @values["last_name"]? || "",
                     autocomplete: "family-name", required: "required",
-                    class: "form-input #{"form-input-error" unless (@errors["last_name"]?.nil?)}",
+                    class: "form-input #{"form-input-error" unless @errors["last_name"]?.nil?}",
                     placeholder: "Smith"
                   if err = @errors["last_name"]?
                     span err, class: "field-error"
@@ -82,7 +82,7 @@ class Portal::RegisterPage
                 input type: "text", id: "company", name: "company",
                   value: @values["company"]? || "",
                   autocomplete: "organization", required: "required",
-                  class: "form-input #{"form-input-error" unless (@errors["company"]?.nil?)}",
+                  class: "form-input #{"form-input-error" unless @errors["company"]?.nil?}",
                   placeholder: "Acme Inc."
                 if err = @errors["company"]?
                   span err, class: "field-error"
@@ -94,7 +94,7 @@ class Portal::RegisterPage
                 input type: "email", id: "email", name: "email",
                   value: @values["email"]? || "",
                   autocomplete: "email", required: "required",
-                  class: "form-input #{"form-input-error" unless (@errors["email"]?.nil?)}",
+                  class: "form-input #{"form-input-error" unless @errors["email"]?.nil?}",
                   placeholder: "you@company.com"
                 if err = @errors["email"]?
                   span err, class: "field-error"
@@ -105,7 +105,7 @@ class Portal::RegisterPage
                 label "Country", for: "country", class: "form-label"
                 selected_country = @values["country"]? || "US"
                 tag "select", id: "country", name: "country", required: "required",
-                  class: "form-input #{"form-input-error" unless (@errors["country"]?.nil?)}" do
+                  class: "form-input #{"form-input-error" unless @errors["country"]?.nil?}" do
                   COUNTRIES.each do |code, name|
                     if code == selected_country
                       option name, value: code, selected: "selected"
@@ -123,7 +123,7 @@ class Portal::RegisterPage
                 label "Password", for: "password", class: "form-label"
                 input type: "password", id: "password", name: "password",
                   autocomplete: "new-password", required: "required", minlength: "12",
-                  class: "form-input #{"form-input-error" unless (@errors["password"]?.nil?)}",
+                  class: "form-input #{"form-input-error" unless @errors["password"]?.nil?}",
                   placeholder: "At least 12 characters"
                 if err = @errors["password"]?
                   span err, class: "field-error"
@@ -134,7 +134,7 @@ class Portal::RegisterPage
                 label "Confirm password", for: "confirm_password", class: "form-label"
                 input type: "password", id: "confirm_password", name: "confirm_password",
                   autocomplete: "new-password", required: "required", minlength: "12",
-                  class: "form-input #{"form-input-error" unless (@errors["confirm_password"]?.nil?)}",
+                  class: "form-input #{"form-input-error" unless @errors["confirm_password"]?.nil?}",
                   placeholder: "Repeat your password"
                 if err = @errors["confirm_password"]?
                   span err, class: "field-error"
@@ -146,10 +146,10 @@ class Portal::RegisterPage
                 div class: "plan-grid" do
                   selected_plan = @values["plan"]? || "free"
                   [
-                    {value: "free",    label: "Free",    price: "Free",          sub: "Up to 3 servers"},
-                    {value: "starter", label: "Starter", price: "$24.50/mo",     sub: "Up to 10 servers"},
-                    {value: "growth",  label: "Growth",  price: "$99.50/mo",     sub: "Up to 50 servers"},
-                    {value: "scale",   label: "Scale",   price: "$249.50/mo",    sub: "Up to 200 servers"},
+                    {value: "free", label: "Free", price: "Free", sub: "Up to 3 servers"},
+                    {value: "starter", label: "Starter", price: "$24.50/mo", sub: "Up to 10 servers"},
+                    {value: "growth", label: "Growth", price: "$99.50/mo", sub: "Up to 50 servers"},
+                    {value: "scale", label: "Scale", price: "$249.50/mo", sub: "Up to 200 servers"},
                   ].each do |plan|
                     checked = selected_plan == plan[:value]
                     div class: "plan-card #{"plan-card-selected" if checked}" do

@@ -11,15 +11,15 @@ module Dirless
       end
 
       def create_checkout_session(customer_id : String, price_id : String, customer_name : String, plan : String, success_url : String, cancel_url : String) : String
-        form = URI::Params.build do |p|
-          p.add("customer", customer_id)
-          p.add("mode", "subscription")
-          p.add("line_items[0][price]", price_id)
-          p.add("line_items[0][quantity]", "1")
-          p.add("success_url", success_url)
-          p.add("cancel_url", cancel_url)
-          p.add("metadata[customer_name]", customer_name)
-          p.add("metadata[plan]", plan)
+        form = URI::Params.build do |params|
+          params.add("customer", customer_id)
+          params.add("mode", "subscription")
+          params.add("line_items[0][price]", price_id)
+          params.add("line_items[0][quantity]", "1")
+          params.add("success_url", success_url)
+          params.add("cancel_url", cancel_url)
+          params.add("metadata[customer_name]", customer_name)
+          params.add("metadata[plan]", plan)
         end
 
         response = HTTP::Client.post(
@@ -60,10 +60,10 @@ module Dirless
       end
 
       def create_customer(email : String, name : String, metadata : Hash(String, String) = {} of String => String) : String
-        form = URI::Params.build do |p|
-          p.add("email", email)
-          p.add("name", name)
-          metadata.each { |k, v| p.add("metadata[#{k}]", v) }
+        form = URI::Params.build do |params|
+          params.add("email", email)
+          params.add("name", name)
+          metadata.each { |k, v| params.add("metadata[#{k}]", v) }
         end
 
         response = HTTP::Client.post(

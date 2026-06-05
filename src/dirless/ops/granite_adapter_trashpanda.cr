@@ -19,7 +19,7 @@ class Granite::Adapter::Trashpanda < Granite::Adapter::Base
 
   def clear(table_name : String)
     statement = "DELETE FROM #{quote(table_name)}"
-    elapsed_time = Time.measure { open { |db| db.exec statement } }
+    elapsed_time = Time.measure { open(&.exec(statement)) }
     log statement, elapsed_time
   end
 
@@ -34,9 +34,9 @@ class Granite::Adapter::Trashpanda < Granite::Adapter::Base
 
     last_id = -1_i64
     elapsed_time = Time.measure do
-      open do |db|
-        db.exec statement, args: params
-        last_id = db.scalar(last_val).as(Int64) if lastval
+      open do |database|
+        database.exec statement, args: params
+        last_id = database.scalar(last_val).as(Int64) if lastval
       end
     end
     log statement, elapsed_time, params
@@ -67,7 +67,7 @@ class Granite::Adapter::Trashpanda < Granite::Adapter::Base
       end
     end.chomp(',')
 
-    elapsed_time = Time.measure { open { |db| db.exec statement, args: params } }
+    elapsed_time = Time.measure { open(&.exec(statement, args: params)) }
     log statement, elapsed_time, params
   end
 
@@ -77,13 +77,13 @@ class Granite::Adapter::Trashpanda < Granite::Adapter::Base
       stmt << fields.map { |name| "#{quote(name)}=?" }.join(", ")
       stmt << " WHERE #{quote(primary_name)}=?"
     end
-    elapsed_time = Time.measure { open { |db| db.exec statement, args: params } }
+    elapsed_time = Time.measure { open(&.exec(statement, args: params)) }
     log statement, elapsed_time, params
   end
 
   def delete(table_name : String, primary_name : String, value)
     statement = "DELETE FROM #{quote(table_name)} WHERE #{quote(primary_name)}=?"
-    elapsed_time = Time.measure { open { |db| db.exec statement, value } }
+    elapsed_time = Time.measure { open(&.exec(statement, value)) }
     log statement, elapsed_time, value
   end
 

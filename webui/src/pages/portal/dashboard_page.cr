@@ -15,6 +15,13 @@ class Portal::DashboardPage < PortalLayout
 
     subdomain = "#{@customer_name}.dirless.com"
     hmac_secret = @customer_info.try(&.hmac_secret) || ""
+    aws_account_id = @customer_info.try(&.aws_account_id)
+    tenant_id = @customer_info.try(&.tenant_id) || ""
+
+    # Non-AWS (manually managed) customers have no EC2 IMDS to derive a tenant_id
+    # from, so the enroll command must pin the stored tenant_id explicitly.
+    # AWS customers (aws_account_id set) keep deriving it on the host from IMDS.
+    manual_tenant = (aws_account_id.nil? || aws_account_id.empty?) && !tenant_id.empty?
 
     unless @email_verified
       div class: "banner banner-warn" do
@@ -27,79 +34,22 @@ class Portal::DashboardPage < PortalLayout
       end
     end
 
-    unless @provisioned
-      # Pending provisioning state
-      div class: "banner banner-warn" do
-        text "⚙ Your backend is being provisioned. This usually takes a few minutes. You'll be able to enroll nodes once it's ready."
-      end
-
-      div class: "info-section" do
-        div class: "info-label" do
-          text "Your subdomain"
-        end
-        div class: "code-box" do
-          text subdomain
-        end
-      end
-
-      div class: "info-section" do
-        div class: "info-label" do
-          text "Enrollment token"
-        end
-        div class: "token-summary", onclick: "toggleToken(this)", style: "cursor:pointer" do
-          span "••••••••••••••••", class: "token-masked"
-          span hmac_secret.empty? ? "(not yet available)" : hmac_secret,
-            class: "token-value-inline code-box",
-            style: "display:none;flex:1;margin:0;padding:0;background:none;border:none;"
-          span "Reveal", class: "token-reveal-label"
-        end
-      end
-
-      div class: "stats-grid" do
-        div class: "stat-card stat-card-dim" do
-          div class: "stat-value" do
-            text "0"
-          end
-          div class: "stat-label" do
-            text "Enrolled nodes"
-          end
-        end
-        div class: "stat-card stat-card-dim" do
-          div class: "stat-value" do
-            text "0"
-          end
-          div class: "stat-label" do
-            text "Synced users"
-          end
-        end
-        div class: "stat-card stat-card-dim" do
-          div class: "stat-value stat-value-pending" do
-            text "Pending"
-          end
-          div class: "stat-label" do
-            text "Last sync"
-          end
-        end
-      end
-
-    else
+    if @provisioned
       # Provisioned state
 
       # Compute aggregate stats from node statuses.
       # Agents are deduplicated by agent_id across backend nodes so the same
       # enrolled machine isn't counted twice (it may appear on primary + replica).
-      total_users      = 0
-      ok_nodes         = 0
-      seen_agent_ids   = Set(String).new
+      total_users = 0
+      seen_agent_ids = Set(String).new
 
       if cs = @customer_status
-        cs.nodes.each do |n|
+        cs.nodes.each do |node|
           # user_count is the same on every Raft replica — only count the primary
           # to avoid double (or triple) counting identical data.
-          total_users += n.user_count || 0 if n.is_primary
-          ok_nodes    += 1 if n.status == "up"
-          (n.agents || [] of Dirless::Ops::WebUI::AgentInfo).each do |agent|
-            if (id = agent.agent_id)
+          total_users += node.user_count || 0 if node.is_primary
+          (node.agents || [] of Dirless::Ops::WebUI::AgentInfo).each do |agent|
+            if id = agent.agent_id
               seen_agent_ids << id
             end
           end
@@ -137,6 +87,29 @@ class Portal::DashboardPage < PortalLayout
         end
       end
 
+      # Tenant ID — only manually-managed (non-AWS) customers need this; it's the
+      # value the enroll command pins below, and what manual directory data is
+      # stored under on the backend.
+      if manual_tenant
+        div class: "info-section" do
+          div class: "info-label" do
+            text "Tenant ID"
+          end
+          div class: "code-box" do
+            text tenant_id
+          end
+        end
+      end
+
+      # Build the enroll command, pinning --tenant-id for non-AWS customers.
+      enroll_command = String.build do |io|
+        io << %(<span class="c-cmd">dirless-cli enroll</span> \\\n)
+        io << %(  <span class="c-flag">--server</span> <span class="c-val">https://#{subdomain}</span> \\\n)
+        io << %(  <span class="c-flag">--token</span>  <span class="c-val">#{hmac_secret}</span>)
+        if manual_tenant
+          io << %( \\\n  <span class="c-flag">--tenant-id</span> <span class="c-val">#{tenant_id}</span>)
+        end
+      end
 
       # Enrollment instructions
       div class: "section-heading" do
@@ -163,9 +136,7 @@ class Portal::DashboardPage < PortalLayout
 chmod <span class="c-val">+x</span> /usr/local/bin/dirless-cli
 
 <span class="c-comment"># enroll this host</span>
-<span class="c-cmd">dirless-cli enroll</span> \\
-  <span class="c-flag">--server</span> <span class="c-val">https://#{subdomain}</span> \\
-  <span class="c-flag">--token</span>  <span class="c-val">#{hmac_secret}</span></pre>
+#{enroll_command}</pre>
 HTML
         end
       end
@@ -257,7 +228,7 @@ HTML
                   starting = node.status != "up" &&
                              !{"active", "failed"}.includes?(node.service_state)
                   status_class, status_label = if node.status == "up"
-                                                 {"badge badge-ok",   "Up"}
+                                                 {"badge badge-ok", "Up"}
                                                elsif starting
                                                  {"badge badge-muted", "Starting"}
                                                else
@@ -272,7 +243,7 @@ HTML
                     td do
                       if node.is_primary
                         span "primary", class: "badge badge-muted"
-                      elsif (lag = node.replication_lag_seconds)
+                      elsif lag = node.replication_lag_seconds
                         lag_class = lag <= 120 ? "badge badge-ok" : "badge badge-error"
                         span format_lag(lag), class: lag_class
                       else
@@ -291,6 +262,60 @@ HTML
                 end
               end
             end
+          end
+        end
+      end
+    else
+      # Pending provisioning state
+      div class: "banner banner-warn" do
+        text "⚙ Your backend is being provisioned. This usually takes a few minutes. You'll be able to enroll nodes once it's ready."
+      end
+
+      div class: "info-section" do
+        div class: "info-label" do
+          text "Your subdomain"
+        end
+        div class: "code-box" do
+          text subdomain
+        end
+      end
+
+      div class: "info-section" do
+        div class: "info-label" do
+          text "Enrollment token"
+        end
+        div class: "token-summary", onclick: "toggleToken(this)", style: "cursor:pointer" do
+          span "••••••••••••••••", class: "token-masked"
+          span hmac_secret.empty? ? "(not yet available)" : hmac_secret,
+            class: "token-value-inline code-box",
+            style: "display:none;flex:1;margin:0;padding:0;background:none;border:none;"
+          span "Reveal", class: "token-reveal-label"
+        end
+      end
+
+      div class: "stats-grid" do
+        div class: "stat-card stat-card-dim" do
+          div class: "stat-value" do
+            text "0"
+          end
+          div class: "stat-label" do
+            text "Enrolled nodes"
+          end
+        end
+        div class: "stat-card stat-card-dim" do
+          div class: "stat-value" do
+            text "0"
+          end
+          div class: "stat-label" do
+            text "Synced users"
+          end
+        end
+        div class: "stat-card stat-card-dim" do
+          div class: "stat-value stat-value-pending" do
+            text "Pending"
+          end
+          div class: "stat-label" do
+            text "Last sync"
           end
         end
       end

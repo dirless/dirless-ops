@@ -10,6 +10,7 @@ module Dirless
         property name : String
         property hmac_secret : String
         property aws_account_id : String?
+        property tenant_id : String?
         property notes : String?
         property port : Int32
         property created_at : String?

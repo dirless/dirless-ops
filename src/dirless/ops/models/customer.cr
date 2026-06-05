@@ -9,7 +9,7 @@ module Dirless
 
       column id : Int64, primary: true
       column name : String
-      column label : String?           # legacy; superseded by company
+      column label : String? # legacy; superseded by company
       column hmac_secret : String
       column aws_account_id : String?
       column notes : String?

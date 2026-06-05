@@ -6,7 +6,7 @@ class Portal::DirectoryPage < PortalLayout
 
   # UIDs/GIDs for locally-added users start above this floor so they never
   # collide with IAM Identity Center-allocated IDs (which start at 1000).
-  LOCAL_UID_FLOOR = 100_000
+  LOCAL_UID_FLOOR  = 100_000
   LOCAL_GROUP_NAME = "dirless-local"
   LOCAL_GROUP_GID  = 100_000
 
@@ -28,7 +28,7 @@ class Portal::DirectoryPage < PortalLayout
       return
     end
 
-    if (err = @backend_error)
+    if err = @backend_error
       div class: "banner banner-error" do
         text "⚠ Could not reach backend: #{err}"
       end
@@ -62,7 +62,6 @@ class Portal::DirectoryPage < PortalLayout
 
     # Revealed after decryption
     div id: "directory-section", class: "hidden" do
-
       # Duplicate banner (computed after decryption)
       div id: "dup-banner", class: "hidden banner banner-warning mb-0" do
         span id: "dup-banner-text" do
@@ -484,7 +483,7 @@ document.getElementById("new-username").addEventListener("keydown", e => {
   if (e.key === "Enter") handleAddUser();
 });
 JAVASCRIPT
-    raw %q(
+      raw %q(
 // Sort users alphabetically before rendering
 const __origRenderAll = renderAll;
 renderAll = function() {

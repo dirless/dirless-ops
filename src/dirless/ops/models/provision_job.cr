@@ -11,7 +11,7 @@ module Dirless
       column created_at : Time?
       column started_at : Time?
       column completed_at : Time?
-      column reset_count : Int64?  # appended via ALTER TABLE — must stay last
+      column reset_count : Int64? # appended via ALTER TABLE — must stay last
 
       def to_response
         {

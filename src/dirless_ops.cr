@@ -107,11 +107,11 @@ module Dirless
             get "/:name", Controllers::GetCustomer
             patch "/:name", Controllers::UpdateCustomer
             delete "/:name", Controllers::DeleteCustomer
-            get "/:name/directory/snapshot",                      Controllers::GetDirectorySnapshot
-            post "/:name/directory/snapshot",                     Controllers::PushDirectorySnapshot
-            get "/:name/directory/snapshot/aws-identity-center",  Controllers::GetCloudSnapshot
-            get "/:name/directory/snapshot/local",                Controllers::GetLocalSnapshot
-            post "/:name/directory/snapshot/local",               Controllers::PushLocalSnapshot
+            get "/:name/directory/snapshot", Controllers::GetDirectorySnapshot
+            post "/:name/directory/snapshot", Controllers::PushDirectorySnapshot
+            get "/:name/directory/snapshot/aws-identity-center", Controllers::GetCloudSnapshot
+            get "/:name/directory/snapshot/local", Controllers::GetLocalSnapshot
+            post "/:name/directory/snapshot/local", Controllers::PushLocalSnapshot
           end
 
           scope "/nodes" do

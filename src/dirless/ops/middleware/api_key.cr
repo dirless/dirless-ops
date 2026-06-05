@@ -15,7 +15,7 @@ module Dirless
         return call_next(context) if EXEMPT_PATHS.includes?(context.request.path)
 
         auth = context.request.headers["Authorization"]?
-        token = auth.try { |h| h.starts_with?("Bearer ") ? h[7..] : nil }
+        token = auth.try { |header| header.starts_with?("Bearer ") ? header[7..] : nil }
 
         unless token && Crypto::Subtle.constant_time_compare(token, @api_key)
           context.response.status_code = 401

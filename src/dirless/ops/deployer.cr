@@ -123,9 +123,9 @@ module Dirless
           File.delete(tmp_vars) rescue nil if tmp_vars
         end
 
-        ANSIBLE_TIMEOUT  = 3.minutes
-        STUCK_THRESHOLD  = ANSIBLE_TIMEOUT + 1.minute
-        MAX_RESET_COUNT  = 3
+        ANSIBLE_TIMEOUT = 3.minutes
+        STUCK_THRESHOLD = ANSIBLE_TIMEOUT + 1.minute
+        MAX_RESET_COUNT = 3
 
         # Returns a JSON::Any hash with id, customer_name, hmac_secret — or nil if nothing to do.
         # All reads/writes go through the API to avoid TPDB multi-process stale cache issues.
@@ -152,7 +152,7 @@ module Dirless
           pending.sort_by { |j| j["created_at"].as_s? || "" }.each do |j|
             customer_name = j["customer_name"].as_s
             customer = api_get("/v1/customers/#{customer_name}") rescue next
-            next if customer["error"]?                              # customer was deleted
+            next if customer["error"]? # customer was deleted
             next unless customer["email_verified"]?.try(&.as_bool?) == true
 
             job_id = j["id"].as_i64

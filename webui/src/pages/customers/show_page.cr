@@ -75,7 +75,7 @@ class Customers::ShowPage < MainLayout
                   service_badge(node.service_state)
                 end
                 td class: "px-6 py-3" do
-                  if (tc = node.tenant_count)
+                  if tc = node.tenant_count
                     span tc.to_s, class: "font-medium #{tc > 0 ? "text-gray-900" : "text-gray-400"}"
                   else
                     span "-", class: "text-gray-400"
@@ -88,7 +88,7 @@ class Customers::ShowPage < MainLayout
                 td class: "px-6 py-3" do
                   lag_badge(node)
                 end
-                td node.response_time_ms.try { |ms| "#{ms}ms" } || "-", class: "px-6 py-3 text-gray-500"
+                td node.response_time_ms.try { |millis| "#{millis}ms" } || "-", class: "px-6 py-3 text-gray-500"
                 td node.checked_at || "never", class: "px-6 py-3 text-gray-400 text-xs"
               end
             end
@@ -99,8 +99,7 @@ class Customers::ShowPage < MainLayout
 
     # Agents detail: collect all agents from the primary node's data
     primary_agents = node_statuses
-      .select(&.is_primary)
-      .first?
+      .find(&.is_primary)
       .try(&.agents)
 
     if primary_agents && !primary_agents.empty?
@@ -129,7 +128,7 @@ class Customers::ShowPage < MainLayout
   end
 
   private def agents_badge(node : Dirless::Ops::WebUI::NodeStatusResponse)
-    if (count = node.active_agents)
+    if count = node.active_agents
       css = count > 0 ? "text-gray-900 font-medium" : "text-gray-400"
       span count.to_s, class: css
     else
@@ -138,7 +137,7 @@ class Customers::ShowPage < MainLayout
   end
 
   private def sync_badge(nodes : Array(Dirless::Ops::WebUI::NodeStatusResponse))
-    up_nodes = nodes.select { |n| n.status == "up" }
+    up_nodes = nodes.select { |node| node.status == "up" }
     return if up_nodes.size < 2
 
     max_lag = up_nodes.compact_map(&.replication_lag_seconds).max?
@@ -149,8 +148,8 @@ class Customers::ShowPage < MainLayout
         span "Lag: #{format_lag(max_lag)}", class: "text-xs font-medium px-2 py-0.5 rounded bg-red-100 text-red-700"
       end
     else
-      enrolled_counts = up_nodes.map(&.tenant_count).compact.uniq
-      user_counts     = up_nodes.map(&.user_count).compact.uniq
+      enrolled_counts = up_nodes.compact_map(&.tenant_count).uniq!
+      user_counts = up_nodes.compact_map(&.user_count).uniq!
       return if enrolled_counts.size == 0 && user_counts.size == 0
       in_sync = enrolled_counts.size <= 1 && user_counts.size <= 1
       if in_sync
@@ -164,7 +163,7 @@ class Customers::ShowPage < MainLayout
   private def lag_badge(node : Dirless::Ops::WebUI::NodeStatusResponse)
     if node.is_primary
       span "primary", class: "text-xs text-gray-400"
-    elsif (lag = node.replication_lag_seconds)
+    elsif lag = node.replication_lag_seconds
       css = lag <= 120 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
       span format_lag(lag), class: "px-2 py-0.5 rounded text-xs font-medium #{css}"
     else
@@ -184,11 +183,11 @@ class Customers::ShowPage < MainLayout
 
   private def service_badge(state : String?)
     label, css = case state
-                 when "active"            then {"active", "bg-green-100 text-green-800"}
-                 when "failed"            then {"failed", "bg-red-100 text-red-800"}
-                 when "inactive", "dead"  then {state.not_nil!, "bg-gray-100 text-gray-600"}
-                 when nil                 then {"unknown", "bg-gray-100 text-gray-400"}
-                 else                          {state.not_nil!, "bg-yellow-100 text-yellow-800"}
+                 when "active"           then {"active", "bg-green-100 text-green-800"}
+                 when "failed"           then {"failed", "bg-red-100 text-red-800"}
+                 when "inactive", "dead" then {state.not_nil!, "bg-gray-100 text-gray-600"}
+                 when nil                then {"unknown", "bg-gray-100 text-gray-400"}
+                 else                         {state.not_nil!, "bg-yellow-100 text-yellow-800"}
                  end
     span label, class: "px-2 py-0.5 rounded text-xs font-medium #{css}"
   end

@@ -1,0 +1,26 @@
+# Project ameba configuration.
+#
+# A few default rules systematically false-positive against the framework DSLs
+# used in this repo (Lucky `needs`, Granite column/JSON::Serializable macros),
+# so they are disabled project-wide. Genuine issues are still fixed in code.
+
+# Lucky `needs` declarations and Granite/JSON macro DSLs are read by ameba's
+# parser as plain assignments and reported as "useless", even though the
+# generated code consumes them. Deleting them would break the app.
+Lint/UselessAssign:
+  Enabled: false
+
+# Boolean fields named `is_*` (e.g. `is_primary`) must match the wire/DB schema
+# they deserialize from, so they can't be renamed to the `primary?` form.
+Naming/QueryBoolMethods:
+  Enabled: false
+
+# `not_nil!` is used intentionally in a handful of view/action paths where the
+# value is guaranteed present by an earlier guard.
+Lint/NotNil:
+  Enabled: false
+
+# View `content` methods are intentionally branchy (conditional rendering of
+# dashboard states); cyclomatic complexity limits don't add value there.
+Metrics/CyclomaticComplexity:
+  Enabled: false

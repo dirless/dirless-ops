@@ -1,5 +1,6 @@
 class Errors::Show < Lucky::ErrorAction
   default_format :html
+
   def default_render(error : Exception) : Lucky::Response
     if error.is_a?(Lucky::RouteNotFoundError)
       error_response(404, "Not Found")

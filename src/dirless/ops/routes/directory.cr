@@ -115,7 +115,7 @@ module Dirless
 
           begin
             status_code, body = backend_get(primary_node.ip, hostname, path,
-                                            customer.hmac_secret, tenant_id)
+              customer.hmac_secret, tenant_id)
             case status_code
             when 200
               context.put_status(200).json({"blob" => body}).halt
@@ -144,7 +144,7 @@ module Dirless
           end
 
           blob_b64 = parsed["blob"]?.try(&.as_s)
-          unless blob_b64 && !blob_b64.empty?
+          if blob_b64.nil? || blob_b64.empty?
             return context.put_status(422).json({"error" => "blob field is required"}).halt
           end
 

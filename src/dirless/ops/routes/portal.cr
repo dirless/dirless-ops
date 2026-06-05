@@ -11,7 +11,6 @@ module Dirless
       class PortalRegister
         include Grip::Controllers::HTTP
 
-        # ameba:disable Metrics/CyclomaticComplexity
         def post(context : Context) : Context
           body = context.request.body.try(&.gets_to_end) || ""
           begin
@@ -20,25 +19,25 @@ module Dirless
             return context.put_status(400).json({"error" => "malformed JSON: #{ex.message}"}).halt
           end
 
-          email          = parsed["email"]?.try(&.as_s).to_s.strip.downcase
-          password       = parsed["password"]?.try(&.as_s).to_s
-          first_name     = parsed["first_name"]?.try(&.as_s).to_s.strip
-          last_name      = parsed["last_name"]?.try(&.as_s).to_s.strip
-          company        = parsed["company"]?.try(&.as_s).to_s.strip
-          country        = parsed["country"]?.try(&.as_s).to_s.strip
+          email = parsed["email"]?.try(&.as_s).to_s.strip.downcase
+          password = parsed["password"]?.try(&.as_s).to_s
+          first_name = parsed["first_name"]?.try(&.as_s).to_s.strip
+          last_name = parsed["last_name"]?.try(&.as_s).to_s.strip
+          company = parsed["company"]?.try(&.as_s).to_s.strip
+          country = parsed["country"]?.try(&.as_s).to_s.strip
           # Admin-only override: skip email verification (safe — all /v1 routes require API key).
           # Accepts JSON boolean true or string "true".
           skip_verify = parsed["email_verified"]?.try { |v| v.as_bool? || v.as_s? == "true" } || false
 
           errors = {} of String => String
-          errors["email"]      = "Required"                       if email.empty?
-          errors["email"]      = "Invalid email"                  unless email.empty? || email.matches?(/\A[^@\s]+@[^@\s]+\.[^@\s]+\z/)
-          errors["password"]   = "Required"                       if password.empty?
-          errors["password"]   = "Must be at least 12 characters" if !password.empty? && password.size < 12
-          errors["first_name"] = "Required"                       if first_name.empty?
-          errors["last_name"]  = "Required"                       if last_name.empty?
-          errors["company"]    = "Required"                       if company.empty?
-          errors["country"]    = "Required"                       if country.empty?
+          errors["email"] = "Required" if email.empty?
+          errors["email"] = "Invalid email" unless email.empty? || email.matches?(/\A[^@\s]+@[^@\s]+\.[^@\s]+\z/)
+          errors["password"] = "Required" if password.empty?
+          errors["password"] = "Must be at least 12 characters" if !password.empty? && password.size < 12
+          errors["first_name"] = "Required" if first_name.empty?
+          errors["last_name"] = "Required" if last_name.empty?
+          errors["company"] = "Required" if company.empty?
+          errors["country"] = "Required" if country.empty?
 
           unless errors.empty?
             return context.put_status(422).json({"error" => errors.map { |field, msg| "#{field}: #{msg}" }.join("; "), "fields" => errors}).halt
@@ -140,9 +139,9 @@ module Dirless
           end
 
           customer_name = parsed["customer_name"]?.try(&.as_s).to_s.strip
-          plan          = parsed["plan"]?.try(&.as_s).to_s.strip.downcase
-          success_url   = parsed["success_url"]?.try(&.as_s).to_s.strip
-          cancel_url    = parsed["cancel_url"]?.try(&.as_s).to_s.strip
+          plan = parsed["plan"]?.try(&.as_s).to_s.strip.downcase
+          success_url = parsed["success_url"]?.try(&.as_s).to_s.strip
+          cancel_url = parsed["cancel_url"]?.try(&.as_s).to_s.strip
 
           unless VALID_PLANS.includes?(plan)
             return context.put_status(422).json({"error" => "invalid plan"}).halt
@@ -157,19 +156,19 @@ module Dirless
           stripe_customer_id = customer.stripe_customer_id
           return context.put_status(422).json({"error" => "no stripe customer on record"}).halt unless stripe_customer_id
 
-          beta    = Ops.config.beta_mode
+          beta = Ops.config.beta_mode
           price_key = beta ? "#{plan}_beta" : "#{plan}_full"
-          price_id  = Ops.config.stripe_prices[price_key]?
+          price_id = Ops.config.stripe_prices[price_key]?
           return context.put_status(503).json({"error" => "price not configured for #{price_key}"}).halt unless price_id
 
           begin
             url = stripe.create_checkout_session(
-              customer_id:   stripe_customer_id,
-              price_id:      price_id,
+              customer_id: stripe_customer_id,
+              price_id: price_id,
               customer_name: customer_name,
-              plan:          plan,
-              success_url:   success_url,
-              cancel_url:    cancel_url
+              plan: plan,
+              success_url: success_url,
+              cancel_url: cancel_url
             )
             context.put_status(200).json({"url" => url}).halt
           rescue ex

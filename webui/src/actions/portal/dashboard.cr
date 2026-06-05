@@ -32,12 +32,18 @@ class Portal::Dashboard < PortalAction
     # Update session so subsequent page loads skip the API call
     session.set(:portal_provisioned, "true") if provisioned
 
+    # Use live email_verified from customer_info (covers stale sessions from before
+    # the verification feature was deployed). Update the session once verified so
+    # we don't need to re-read it on every page load.
+    email_verified = portal_email_verified || customer_info.not_nil!.email_verified == true
+    session.set(:portal_email_verified, "true") if email_verified
+
     html Portal::DashboardPage,
       email: portal_email,
       company: portal_company,
       customer_name: portal_customer_name,
       provisioned: provisioned,
-      email_verified: portal_email_verified,
+      email_verified: email_verified,
       customer_info: customer_info,
       customer_status: customer_status
   end

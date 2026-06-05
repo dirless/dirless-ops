@@ -24,8 +24,8 @@ module Dirless
 
             # Find the primary node's data_updated_at for lag calculation
             primary_updated_at = checks
-              .select { |n, _| n.is_primary }
-              .first?.try { |_, hc| hc.try(&.data_updated_at) }
+              .find { |node, _| node.is_primary }
+              .try { |_, health_check| health_check.try(&.data_updated_at) }
 
             node_statuses = checks.map do |node, latest|
               node_updated_at = latest.try(&.data_updated_at)
@@ -40,12 +40,12 @@ module Dirless
 
               # Parse agents JSON array stored by the poller
               agents = begin
-                if (json_str = latest.try(&.agents_json))
-                  JSON.parse(json_str).as_a.map do |a|
+                if json_str = latest.try(&.agents_json)
+                  JSON.parse(json_str).as_a.map do |agent|
                     {
-                      "agent_id"     => a["agent_id"]?.try(&.as_s),
-                      "hostname"     => a["hostname"]?.try(&.as_s),
-                      "last_seen_at" => a["last_seen_at"]?.try(&.as_s),
+                      "agent_id"     => agent["agent_id"]?.try(&.as_s),
+                      "hostname"     => agent["hostname"]?.try(&.as_s),
+                      "last_seen_at" => agent["last_seen_at"]?.try(&.as_s),
                     }
                   end
                 end
@@ -54,7 +54,7 @@ module Dirless
               end
 
               service_state = begin
-                if (sj = node.services_json)
+                if sj = node.services_json
                   JSON.parse(sj)[customer.name]?.try(&.as_s)
                 end
               rescue
@@ -62,23 +62,23 @@ module Dirless
               end
 
               {
-                "node_id"                => node.id,
-                "node_name"              => node.name,
-                "node_ip"                => node.ip,
-                "region"                 => node.region,
-                "is_primary"             => node.is_primary,
-                "status"                 => latest.try(&.status) || "unknown",
-                "http_status"            => latest.try(&.http_status),
-                "response_time_ms"       => latest.try(&.response_time_ms),
-                "tenant_count"           => latest.try(&.tenant_count),
-                "user_count"             => latest.try(&.user_count),
-                "data_updated_at"        => node_updated_at.try(&.to_rfc3339),
+                "node_id"                 => node.id,
+                "node_name"               => node.name,
+                "node_ip"                 => node.ip,
+                "region"                  => node.region,
+                "is_primary"              => node.is_primary,
+                "status"                  => latest.try(&.status) || "unknown",
+                "http_status"             => latest.try(&.http_status),
+                "response_time_ms"        => latest.try(&.response_time_ms),
+                "tenant_count"            => latest.try(&.tenant_count),
+                "user_count"              => latest.try(&.user_count),
+                "data_updated_at"         => node_updated_at.try(&.to_rfc3339),
                 "replication_lag_seconds" => lag_seconds,
-                "active_agents"          => latest.try(&.active_agents),
-                "agents"                 => agents,
-                "error"                  => latest.try(&.error),
-                "checked_at"             => latest.try(&.checked_at.try(&.to_rfc3339)),
-                "service_state"          => service_state,
+                "active_agents"           => latest.try(&.active_agents),
+                "agents"                  => agents,
+                "error"                   => latest.try(&.error),
+                "checked_at"              => latest.try(&.checked_at.try(&.to_rfc3339)),
+                "service_state"           => service_state,
               }
             end
 

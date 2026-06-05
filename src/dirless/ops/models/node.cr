@@ -1,6 +1,5 @@
 require "granite"
 
-
 module Dirless
   module Ops
     class Node < Granite::Base

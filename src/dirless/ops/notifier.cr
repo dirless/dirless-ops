@@ -154,14 +154,14 @@ module Dirless
         tmp = File.join(@spool_dir, "#{Random::Secure.hex(8)}.eml.tmp")
         final = tmp.sub(".eml.tmp", ".eml")
 
-        content = String.build do |s|
-          s << "From: #{FROM}\n"
-          s << "To: #{to}\n"
-          s << "Subject: #{subject}\n"
-          s << "MIME-Version: 1.0\n"
-          s << "Content-Type: text/plain; charset=UTF-8\n"
-          s << "\n"
-          s << body
+        content = String.build do |io|
+          io << "From: #{FROM}\n"
+          io << "To: #{to}\n"
+          io << "Subject: #{subject}\n"
+          io << "MIME-Version: 1.0\n"
+          io << "Content-Type: text/plain; charset=UTF-8\n"
+          io << "\n"
+          io << body
         end
 
         File.write(tmp, content)

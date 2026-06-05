@@ -93,9 +93,9 @@ module Dirless
             return context.put_status(400).json({"error" => "malformed JSON: #{ex.message}"}).halt
           end
 
-          parsed["ip"]?.try { |v| v.as_s?.try { |s| node.ip = s } }
-          parsed["region"]?.try { |v| v.as_s?.try { |s| node.region = s } }
-          parsed["provider"]?.try { |v| v.as_s?.try { |s| node.provider = s } }
+          parsed["ip"]?.try { |v| v.as_s?.try { |str| node.ip = str } }
+          parsed["region"]?.try { |v| v.as_s?.try { |str| node.region = str } }
+          parsed["provider"]?.try { |v| v.as_s?.try { |str| node.provider = str } }
           parsed["is_primary"]?.try { |v|
             node.is_primary = v.as_bool? || v.as_s? == "true"
           }
