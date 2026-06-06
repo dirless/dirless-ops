@@ -7,7 +7,8 @@ module Dirless
 
       FROM = "Dirless <info@dirless.com>"
 
-      def initialize(@spool_dir : String, @ops_alert_email : String? = nil)
+      def initialize(@spool_dir : String, @ops_alert_email : String? = nil,
+                     @portal_url : String = "https://portal.dirless.com")
       end
 
       def welcome(email : String, company : String, customer_name : String)
@@ -28,7 +29,7 @@ module Dirless
       end
 
       def verify_email(email : String, token : String)
-        link = "https://portal.dirless.com/verify-email?token=#{token}"
+        link = "#{@portal_url}/verify-email?token=#{token}"
         body = <<-BODY
         Hi there,
 
@@ -49,7 +50,7 @@ module Dirless
 
         Great news — your Dirless environment is ready.
 
-        Dashboard: https://portal.dirless.com
+        Dashboard: #{@portal_url}
 
         If you have any questions, just reply to this email.
 
