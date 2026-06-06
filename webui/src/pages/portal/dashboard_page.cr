@@ -13,7 +13,7 @@ class Portal::DashboardPage < PortalLayout
     raw "<style>#{extra_css}</style>"
     raw "<script>#{extra_js}</script>"
 
-    subdomain = "#{@customer_name}.dirless.com"
+    subdomain = "#{@customer_name}.#{ENV.fetch("BACKEND_DOMAIN", "dirless.com")}"
     hmac_secret = @customer_info.try(&.hmac_secret) || ""
     aws_account_id = @customer_info.try(&.aws_account_id)
     tenant_id = @customer_info.try(&.tenant_id) || ""
