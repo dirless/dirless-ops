@@ -128,10 +128,13 @@ class Portal::DashboardPage < PortalLayout
 <pre><span class="c-comment"># install (RHEL / Amazon Linux 2023)</span>
 <span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://dirless.com/rpm/dirless.repo</span> \
   <span class="c-flag">-o</span> /etc/yum.repos.d/dirless.repo
-<span class="c-cmd">dnf install</span> <span class="c-val">-y dirless-cli</span>
+<span class="c-cmd">dnf install</span> <span class="c-val">-y dirless-cli dirless-agent</span>
 
-<span class="c-comment"># enroll this host</span>
-#{enroll_command}</pre>
+<span class="c-comment"># enroll this host (also writes /etc/dirless/dirless-agent.toml)</span>
+#{enroll_command}
+
+<span class="c-comment"># start the agent</span>
+<span class="c-cmd">systemctl enable</span> <span class="c-flag">--now</span> <span class="c-val">dirless-agent</span></pre>
 HTML
         end
       end
