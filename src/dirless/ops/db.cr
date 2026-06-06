@@ -165,10 +165,10 @@ module Dirless
       begin
         db.query("SELECT name FROM nodes") { |rs| rs.each { rs.read(String) } }
       rescue DB::ColumnTypeMismatchError
-        Log.warn { "nodes table has corrupted rows — dropping and recreating (TPDB leaf-page-bloat repair)" }
+        Log.warn { "nodes table has corrupted rows - dropping and recreating (TPDB leaf-page-bloat repair)" }
         db.exec("DROP TABLE IF EXISTS nodes")
       rescue DB::Error
-        # Table doesn't exist yet — SCHEMA_STATEMENTS will create it.
+        # Table doesn't exist yet - SCHEMA_STATEMENTS will create it.
       end
 
       SCHEMA_STATEMENTS.each do |sql|
@@ -178,7 +178,7 @@ module Dirless
         if msg.includes?("duplicate column") || msg.includes?("already exists")
           Log.debug { "schema statement skipped (idempotent): #{msg}" }
         else
-          Log.warn { "schema migration failed: #{msg} — SQL: #{sql.strip[0, 80]}" }
+          Log.warn { "schema migration failed: #{msg} - SQL: #{sql.strip[0, 80]}" }
         end
       end
     end

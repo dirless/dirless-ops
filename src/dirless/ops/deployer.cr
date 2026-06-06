@@ -55,7 +55,7 @@ module Dirless
         def run_deprovision
           playbook = @deprovision_playbook
           unless playbook
-            Log.debug { "deprovision_playbook not configured — skipping deprovision spool check" }
+            Log.debug { "deprovision_playbook not configured - skipping deprovision spool check" }
             return
           end
 
@@ -72,7 +72,7 @@ module Dirless
 
             if success
               File.delete(spool_file)
-              Log.info { "Deprovision of #{customer_name} completed — spool file removed" }
+              Log.info { "Deprovision of #{customer_name} completed - spool file removed" }
             else
               Log.error { "Deprovision of #{customer_name} failed: #{output}" }
             end
@@ -127,7 +127,7 @@ module Dirless
         STUCK_THRESHOLD = ANSIBLE_TIMEOUT + 1.minute
         MAX_RESET_COUNT = 3
 
-        # Returns a JSON::Any hash with id, customer_name, hmac_secret — or nil if nothing to do.
+        # Returns a JSON::Any hash with id, customer_name, hmac_secret - or nil if nothing to do.
         # All reads/writes go through the API to avoid TPDB multi-process stale cache issues.
         def claim_next_job : JSON::Any?
           # Auto-reset stuck in_progress jobs.
@@ -290,7 +290,7 @@ module Dirless
             "Provision job stuck: #{customer_name}",
             "Provision job ##{job_id} for customer '#{customer_name}' has been auto-reset " \
             "#{reset_count} time(s) after exceeding the #{ANSIBLE_TIMEOUT.total_minutes.to_i}-minute timeout. " \
-            "Please investigate — further resets will continue but the job may need manual intervention."
+            "Please investigate - further resets will continue but the job may need manual intervention."
           )
         end
       end

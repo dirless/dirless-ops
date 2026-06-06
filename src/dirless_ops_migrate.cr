@@ -32,12 +32,12 @@ rows = db.query_all(
   "FROM customer_accounts",
   as: {String, String, String, String?, String?, String?, String?, Int32, Int32, String?, String?, Int32, String?}
 ) rescue begin
-  puts "customer_accounts table not found or empty — nothing to migrate."
+  puts "customer_accounts table not found or empty - nothing to migrate."
   exit 0
 end
 
 if rows.empty?
-  puts "No rows in customer_accounts — nothing to migrate."
+  puts "No rows in customer_accounts - nothing to migrate."
   exit 0
 end
 

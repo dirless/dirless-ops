@@ -25,7 +25,7 @@ module Dirless
           last_name = parsed["last_name"]?.try(&.as_s).to_s.strip
           company = parsed["company"]?.try(&.as_s).to_s.strip
           country = parsed["country"]?.try(&.as_s).to_s.strip
-          # Admin-only override: skip email verification (safe — all /v1 routes require API key).
+          # Admin-only override: skip email verification (safe - all /v1 routes require API key).
           # Accepts JSON boolean true or string "true".
           skip_verify = parsed["email_verified"]?.try { |v| v.as_bool? || v.as_s? == "true" } || false
 

@@ -18,12 +18,12 @@ module Dirless
         Thank you for signing up for Dirless!
 
         We've sent a separate email to verify your address. Your environment
-        will be provisioned as soon as you confirm — just click the
+        will be provisioned as soon as you confirm - just click the
         verification link.
 
         If you have any questions, just reply to this email.
 
-        — The Dirless team
+        - The Dirless team
         BODY
         queue(email, "Welcome to Dirless", body)
       end
@@ -39,7 +39,7 @@ module Dirless
 
         If you didn't create a Dirless account, you can safely ignore this email.
 
-        — The Dirless team
+        - The Dirless team
         BODY
         queue(email, "Verify your Dirless email address", body)
       end
@@ -48,13 +48,13 @@ module Dirless
         body = <<-BODY
         Hi there,
 
-        Great news — your Dirless environment is ready.
+        Great news - your Dirless environment is ready.
 
         Dashboard: #{@portal_url}
 
         If you have any questions, just reply to this email.
 
-        — The Dirless team
+        - The Dirless team
         BODY
         queue(email, "Your Dirless environment is ready", body)
       end
@@ -68,7 +68,7 @@ module Dirless
 
         We'll follow up with you shortly.
 
-        — The Dirless team
+        - The Dirless team
         BODY
         queue(email, "Issue with your Dirless environment setup", body)
       end
@@ -81,7 +81,7 @@ module Dirless
 
         If you believe this was done in error, please reply to this email.
 
-        — The Dirless team
+        - The Dirless team
         BODY
         queue(email, "Your Dirless account has been deleted", body)
       end
@@ -100,7 +100,7 @@ module Dirless
         Backtrace:
         #{backtrace}
 
-        — Dirless ops daemon
+        - Dirless ops daemon
         BODY
         queue(to, "⚠️ Registration error for #{email}", body)
       end
@@ -131,9 +131,9 @@ module Dirless
 
         and re-save any portal-managed local users.
 
-        — The Dirless team
+        - The Dirless team
         BODY
-        queue(email, "⚠ Age key mismatch on #{hostname} — action required", body)
+        queue(email, "⚠ Age key mismatch on #{hostname} - action required", body)
       end
 
       def probe_failing(node_name : String, node_ip : String, error : String, count : Int32)
@@ -147,7 +147,7 @@ module Dirless
         Error: #{error}
         Time:  #{Time.utc.to_rfc3339}
 
-        — Dirless node prober
+        - Dirless node prober
         BODY
         queue(to, "Node probe failing: #{node_name} (#{count} consecutive failures)", body)
       end
@@ -163,7 +163,7 @@ module Dirless
         Error: #{error}
         Time:  #{Time.utc.to_rfc3339}
 
-        — Dirless node prober
+        - Dirless node prober
         BODY
         queue(to, "Node down: #{node_name}", body)
       end

@@ -16,7 +16,7 @@ module Dirless
         private def resolve_tenant_id(customer : Customer) : String?
           # When aws_account_id is known the canonical tenant_id is always
           # HMAC(hmac_secret, aws_account_id). Update the stored value if it
-          # doesn't match — this heals stale lazy-generated IDs from before
+          # doesn't match - this heals stale lazy-generated IDs from before
           # aws_account_id was populated.
           if (aid = customer.aws_account_id) && !aid.empty? && (secret = customer.hmac_secret)
             canonical = "aws___" + OpenSSL::HMAC.hexdigest(:sha256, secret, aid)
@@ -209,7 +209,7 @@ module Dirless
       end
 
       # Legacy alias kept for backward compatibility. Previously wrote to the
-      # cloud blob (/v1/syncer/sync) — now redirected to the local blob so that
+      # cloud blob (/v1/syncer/sync) - now redirected to the local blob so that
       # manually-added users are preserved across syncer cycles.
       # Remove once all portal clients are on the new paths.
       GetDirectorySnapshot = GetCloudSnapshot
