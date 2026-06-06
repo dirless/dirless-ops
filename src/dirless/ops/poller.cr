@@ -45,7 +45,7 @@ module Dirless
       end
 
       private def check_health(node : Node, customer : Customer)
-        hostname = "#{customer.name}.dirless.com"
+        hostname = "#{customer.name}.#{Ops.config.backend_domain}"
         checked_at = Time.utc
         start_time = Time.instant
 

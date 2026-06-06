@@ -111,7 +111,7 @@ module Dirless
           return context unless result
 
           customer, tenant_id, primary_node = result
-          hostname = "#{customer.name}.dirless.com"
+          hostname = "#{customer.name}.#{Ops.config.backend_domain}"
 
           begin
             status_code, body = backend_get(primary_node.ip, hostname, path,
@@ -150,7 +150,7 @@ module Dirless
 
           recipient = parsed["recipient"]?.try(&.as_s) || ""
 
-          hostname = "#{customer.name}.dirless.com"
+          hostname = "#{customer.name}.#{Ops.config.backend_domain}"
           begin
             status_code, response_body = backend_put(
               primary_node.ip, hostname, path,

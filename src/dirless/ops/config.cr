@@ -15,6 +15,7 @@ module Dirless
       getter mail_spool_dir : String
       getter ops_alert_email : String?
       getter portal_url : String
+      getter backend_domain : String
       getter deprovision_spool_dir : String
       getter stripe_secret_key : String?
       getter stripe_publishable_key : String?
@@ -43,6 +44,7 @@ module Dirless
         @ops_alert_email = toml["notifications"]?.try(&.["ops_alert_email"]?.try(&.as_s))
         @portal_url = toml["notifications"]?.try(&.["portal_url"]?.try(&.as_s)) ||
                       "https://portal.dirless.com"
+        @backend_domain = toml["backend"]?.try(&.["domain"]?.try(&.as_s)) || "dirless.com"
         @deprovision_spool_dir = toml["deployer"]?.try(&.["deprovision_spool_dir"]?.try(&.as_s)) ||
                                  "/var/spool/dirless-ops/deprovision"
         @stripe_secret_key = toml["stripe"]?.try(&.["secret_key"]?.try(&.as_s))
