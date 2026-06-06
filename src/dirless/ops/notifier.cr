@@ -105,6 +105,37 @@ module Dirless
         queue(to, "⚠️ Registration error for #{email}", body)
       end
 
+      # Sent to the customer when a host's age key doesn't match the key
+      # registered in the backend. Snapshots fail to decrypt until the key
+      # is rotated. Triggered by the ops enrollment proxy when it detects a
+      # 409 key-mismatch response from the backend.
+      def age_key_mismatch(email : String, company : String, hostname : String,
+                           registered_key : String, host_key : String)
+        body = <<-BODY
+        Hi there,
+
+        An age key mismatch was detected for your Dirless environment.
+
+        Host         : #{hostname}
+        Expected key : #{registered_key}
+        Host's key   : #{host_key}
+
+        This host was likely re-enrolled, generating a new age keypair. The backend
+        still holds the original key, so snapshots will fail to decrypt on this host
+        until the key is rotated.
+
+        To fix, log in to your Dirless portal and go to Directory → Rotate age key,
+        or ask your administrator to run:
+
+          PUT /v1/snapshot/public-key  {"age_public_key": "#{host_key}"}
+
+        and re-save any portal-managed local users.
+
+        — The Dirless team
+        BODY
+        queue(email, "⚠ Age key mismatch on #{hostname} — action required", body)
+      end
+
       def probe_failing(node_name : String, node_ip : String, error : String, count : Int32)
         to = @ops_alert_email
         return unless to
