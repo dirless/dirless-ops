@@ -17,7 +17,7 @@ abstract class PortalLayout
     html_doctype
     html lang: "en" do
       head do
-        title "Dirless — #{page_title}"
+        title "Dirless - #{page_title}"
         meta charset: "utf-8"
         meta name: "viewport", content: "width=device-width, initial-scale=1"
         raw "<style>#{portal_css}</style>"
