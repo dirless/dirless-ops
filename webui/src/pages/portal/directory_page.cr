@@ -596,7 +596,20 @@ async function handleSave() {
     setStatus("save-status", "Decrypt first.", "status-error");
     return;
   }
-  // Flush any open SSH key textareas before encrypting
+  // Validate and flush any open SSH key textareas before encrypting
+  for (const row of document.querySelectorAll(".ssh-key-row:not(.hidden)")) {
+    const ta = row.querySelector("textarea");
+    if (!ta) continue;
+    const val = ta.value.trim();
+    if (!val) continue;
+    const result = await validateSshKeys(val);
+    if (result.error) {
+      const username = ta.dataset.username;
+      setStatus("save-status", `SSH key error for ${username}: ${result.error}`, "status-error");
+      ta.focus();
+      return;
+    }
+  }
   saveAllOpenSshKeys();
   setStatus("save-status",
     "Encrypting " + localUsers.length + " local user" + (localUsers.length === 1 ? "" : "s") + "…",
