@@ -146,6 +146,8 @@ module Dirless
       "UPDATE customers SET company = label WHERE company IS NULL AND label IS NOT NULL",
       # Migration: track how many times a provision job has been auto-reset due to timeout.
       "ALTER TABLE provision_jobs ADD COLUMN reset_count INTEGER",
+      # Migration: per-customer server limit (derived from plan, admin-overridable).
+      "ALTER TABLE customers ADD COLUMN server_limit INTEGER",
     ]
 
     def self.setup_db(database_path : String)

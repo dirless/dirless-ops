@@ -1,6 +1,9 @@
 require "grip"
 require "json"
+require "openssl"
+require "dirless-http"
 require "../models/customer"
+require "../models/node"
 
 module Dirless
   module Ops
@@ -125,12 +128,45 @@ module Dirless
           parsed["notes"]?.try { |v| customer.notes = v.as_s? }
           parsed["tenant_id"]?.try { |v| customer.tenant_id = v.as_s? }
           parsed["password"]?.try { |v| v.as_s?.try { |str| customer.password_hash = Customer.hash_password(str) } }
+          parsed["plan"]?.try { |v| v.as_s?.try { |str|
+            customer.plan = str
+            customer.server_limit = Customer.limit_for_plan(str)
+          } }
+          parsed["server_limit"]?.try { |v| (v.as_i64? || v.as_s?.try(&.to_i64?)).try { |n| customer.server_limit = n } }
 
           unless customer.save
             return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
           end
 
+          push_server_limit(customer) if parsed["plan"]? || parsed["server_limit"]?
+
           context.put_status(200).json(customer.to_response).halt
+        end
+
+        private def push_server_limit(customer : Customer) : Nil
+          tenant_id = customer.tenant_id
+          return unless tenant_id && !tenant_id.empty?
+
+          limit = customer.server_limit || Customer.limit_for_plan(customer.plan)
+          primary_node = Node.all.find(&.is_primary)
+          return unless primary_node
+
+          hostname = "#{customer.name}.#{Ops.config.backend_domain}"
+          tls = OpenSSL::SSL::Context::Client.new
+          client = Dirless::Net::TargetedClient.new(primary_node.ip, hostname, 443, tls)
+          client.connect_timeout = 5.seconds
+          client.read_timeout = 10.seconds
+          headers = HTTP::Headers{
+            "Authorization" => "Bearer #{customer.hmac_secret}",
+            "X-Tenant-ID"   => tenant_id,
+            "Content-Type"  => "application/json",
+          }
+          body = {"key" => "server_limit", "value" => limit.to_s}.to_json
+          client.post("/v1/admin/settings", headers: headers, body: body)
+        rescue ex
+          Log.warn { "push_server_limit failed for #{customer.name}: #{ex.message}" }
+        ensure
+          client.try(&.close) rescue nil
         end
       end
 

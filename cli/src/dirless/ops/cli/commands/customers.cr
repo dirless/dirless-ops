@@ -8,7 +8,7 @@ module Dirless
     module CLI
       module Commands
         module Customers
-          VALID_PLANS = {"free", "starter", "growth", "scale"}
+          VALID_PLANS = {"free", "growth", "scale"}
 
           # Characters used for auto-generated passwords: mixed case + digits.
           # No special characters to avoid copy-paste / terminal escaping issues.
@@ -88,7 +88,7 @@ module Dirless
               opt.on("--last-name NAME", "Last name") { |v| last_name = v }
               opt.on("--company COMPANY", "Company / organisation name") { |v| company = v }
               opt.on("--country CODE", "ISO 3166-1 alpha-2 country code (default: US)") { |v| country = v.upcase }
-              opt.on("--plan PLAN", "Plan: free, starter, growth, scale (default: free)") { |v| plan = v.downcase }
+              opt.on("--plan PLAN", "Plan: free, growth, scale (default: free)") { |v| plan = v.downcase }
               opt.on("--verified", "Mark email as already verified (skips verification email)") { verified = true }
               opt.on("--random-aws-account-id", "Generate a random 12-digit AWS account ID (useful for staging)") { random_aws_account_id = true }
               opt.on("-h", "--help", "Show help") { puts opt; exit 0 }
@@ -154,7 +154,7 @@ module Dirless
             puts "Welcome and verification emails sent to #{email_s}."
             puts "Provisioning will start automatically within ~30 seconds."
 
-            if {"starter", "growth", "scale"}.includes?(plan)
+            if {"growth", "scale"}.includes?(plan)
               puts ""
               puts "Note: --plan #{plan} was specified but the portal register endpoint"
               puts "always creates accounts on the Free plan. Direct the customer to"

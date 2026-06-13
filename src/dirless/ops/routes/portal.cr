@@ -1,6 +1,9 @@
 require "grip"
 require "json"
+require "openssl"
+require "dirless-http"
 require "../models/customer"
+require "../models/node"
 require "../models/provision_job"
 
 module Dirless
@@ -128,7 +131,7 @@ module Dirless
       class PortalCreateCheckout
         include Grip::Controllers::HTTP
 
-        VALID_PLANS = {"starter", "growth", "scale"}
+        VALID_PLANS = {"growth", "scale"}
 
         def post(context : Context) : Context
           body = context.request.body.try(&.gets_to_end) || ""
@@ -202,9 +205,38 @@ module Dirless
           return context.put_status(404).json({"error" => "account not found"}).halt unless customer
 
           customer.plan = result[:plan]
+          customer.server_limit = Customer.limit_for_plan(result[:plan])
           customer.save
 
+          push_server_limit(customer)
+
           context.put_status(200).json(customer.to_response).halt
+        end
+
+        private def push_server_limit(customer : Customer) : Nil
+          tenant_id = customer.tenant_id
+          return unless tenant_id && !tenant_id.empty?
+
+          limit = customer.server_limit || Customer.limit_for_plan(customer.plan)
+          primary_node = Node.all.find(&.is_primary)
+          return unless primary_node
+
+          hostname = "#{customer.name}.#{Ops.config.backend_domain}"
+          tls = OpenSSL::SSL::Context::Client.new
+          client = Dirless::Net::TargetedClient.new(primary_node.ip, hostname, 443, tls)
+          client.connect_timeout = 5.seconds
+          client.read_timeout = 10.seconds
+          headers = HTTP::Headers{
+            "Authorization" => "Bearer #{customer.hmac_secret}",
+            "X-Tenant-ID"   => tenant_id,
+            "Content-Type"  => "application/json",
+          }
+          body = {"key" => "server_limit", "value" => limit.to_s}.to_json
+          client.post("/v1/admin/settings", headers: headers, body: body)
+        rescue ex
+          Log.warn { "push_server_limit failed for #{customer.name}: #{ex.message}" }
+        ensure
+          client.try(&.close) rescue nil
         end
       end
 

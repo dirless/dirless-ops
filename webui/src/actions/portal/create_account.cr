@@ -1,7 +1,7 @@
 class Portal::CreateAccount < Lucky::Action
   accepted_formats [:html]
 
-  PAID_PLANS = {"starter", "growth", "scale"}
+  PAID_PLANS = {"growth", "scale"}
 
   post "/register" do
     email = params.get?(:email).to_s.strip
@@ -12,7 +12,7 @@ class Portal::CreateAccount < Lucky::Action
     company = params.get?(:company).to_s.strip
     country = params.get?(:country).to_s.strip
     plan = params.get?(:plan).to_s.strip.downcase
-    plan = "free" unless {"free", "starter", "growth", "scale"}.includes?(plan)
+    plan = "free" unless {"free", "growth", "scale"}.includes?(plan)
 
     errors = {} of String => String
     values = {"email" => email, "first_name" => first_name, "last_name" => last_name, "company" => company, "country" => country, "plan" => plan}

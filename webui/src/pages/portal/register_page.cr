@@ -146,10 +146,9 @@ class Portal::RegisterPage
                 div class: "plan-grid" do
                   selected_plan = @values["plan"]? || "free"
                   [
-                    {value: "free", label: "Free", price: "Free", sub: "Up to 3 servers"},
-                    {value: "starter", label: "Starter", price: "$24.50/mo", sub: "Up to 10 servers"},
-                    {value: "growth", label: "Growth", price: "$99.50/mo", sub: "Up to 50 servers"},
-                    {value: "scale", label: "Scale", price: "$249.50/mo", sub: "Up to 200 servers"},
+                    {value: "free",   label: "Free",   price: "Free",    sub: "Up to 10 servers"},
+                    {value: "growth", label: "Growth", price: "$5/mo",   sub: "Up to 50 servers"},
+                    {value: "scale",  label: "Scale",  price: "$15/mo",  sub: "Up to 200 servers"},
                   ].each do |plan|
                     checked = selected_plan == plan[:value]
                     div class: "plan-card #{"plan-card-selected" if checked}" do
@@ -169,7 +168,7 @@ class Portal::RegisterPage
                   end
                 end
                 para class: "plan-note" do
-                  text "* Free plan — up to 3 servers, no credit card required"
+                  text "* Free plan — up to 10 servers, no credit card required"
                 end
               end
 

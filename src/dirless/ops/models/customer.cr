@@ -28,8 +28,17 @@ module Dirless
       column stripe_customer_id : String?
       column beta_customer : Bool?
       column plan : String?
+      column server_limit : Int64?
 
       timestamps
+
+      def self.limit_for_plan(plan : String?) : Int64
+        case plan
+        when "growth" then 50_i64
+        when "scale"  then 200_i64
+        else               10_i64
+        end
+      end
 
       def port : Int32
         (name || "").split("-").last.to_i
@@ -64,6 +73,7 @@ module Dirless
           "provisioned"    => provisioned,
           "email_verified" => email_verified,
           "plan"           => plan || "free",
+          "server_limit"   => server_limit || Customer.limit_for_plan(plan),
           "created_at"     => created_at.try(&.to_rfc3339),
           "updated_at"     => updated_at.try(&.to_rfc3339),
         }

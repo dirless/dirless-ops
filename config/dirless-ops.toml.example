@@ -17,8 +17,6 @@ publishable_key = "pk_live_replace_me"
 beta_mode = true
 
 [stripe_prices]
-starter_beta = "price_replace_me"
-starter_full = "price_replace_me"
 growth_beta  = "price_replace_me"
 growth_full  = "price_replace_me"
 scale_beta   = "price_replace_me"

@@ -3,7 +3,7 @@ class Portal::Register < Lucky::Action
 
   get "/register" do
     plan = params.get?(:plan).to_s.strip.downcase
-    plan = "free" unless {"free", "starter", "growth", "scale"}.includes?(plan)
+    plan = "free" unless {"free", "growth", "scale"}.includes?(plan)
     html Portal::RegisterPage, errors: {} of String => String, values: {"plan" => plan}
   end
 end
