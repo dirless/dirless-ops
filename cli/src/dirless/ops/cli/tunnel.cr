@@ -11,7 +11,7 @@ module Dirless
         # Fixed host mappings — these never change.
         HOSTS = {
           "prod"    => "admin.dirless.com",
-          "staging" => "staging-admin.dirless.com",
+          "staging" => "admin.staging.dirless.com",
         }
 
         # Each named environment gets its own local port so a running dev instance
