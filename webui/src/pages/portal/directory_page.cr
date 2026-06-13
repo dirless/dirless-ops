@@ -89,6 +89,7 @@ class Portal::DirectoryPage < PortalLayout
                 th "Display name"
                 th "UID"
                 th "Shell"
+                th "SSH Keys"
               end
             end
             tbody id: "cloud-tbody" do
@@ -132,6 +133,12 @@ class Portal::DirectoryPage < PortalLayout
               input type: "text", id: "new-shell", class: "dir-input", value: "/bin/bash"
             end
           end
+          div class: "mt-s" do
+            label "SSH public keys", for: "new-ssh-keys", class: "dir-label"
+            textarea id: "new-ssh-keys", class: "dir-textarea", rows: "2",
+              placeholder: "One key per line (optional — can be added later)" do
+            end
+          end
           div class: "dir-row mt-s" do
             button id: "confirm-add-btn", type: "button", class: "btn btn-primary btn-sm" do
               text "Add"
@@ -150,6 +157,7 @@ class Portal::DirectoryPage < PortalLayout
                 th "Display name"
                 th "UID"
                 th "Shell"
+                th "SSH Keys"
                 th ""
               end
             end
@@ -191,6 +199,7 @@ import * as age from "https://esm.sh/age-encryption@0";
 
 let cloudUsers = [];
 let localUsers = [];
+let sshKeys    = {};   // username → newline-separated public keys string
 let identity   = null;
 
 // ── binary / base64 ─────────────────────────────────────────────────────────
@@ -257,14 +266,121 @@ function setStatus(id, msg, cls) {
 }
 
 async function decryptBlob(b64, key) {
-  if (!b64) return [];
+  if (!b64) return { users: [], sshKeys: {} };
   const d = new age.Decrypter();
   d.addIdentity(key);
   const gzipped   = await d.decrypt(b64ToBytes(b64), "uint8array");
   const jsonBytes = await gunzip(gzipped);
   const payload   = JSON.parse(new TextDecoder().decode(jsonBytes));
-  return Array.isArray(payload.users) ? payload.users : [];
+  return {
+    users:   Array.isArray(payload.users) ? payload.users : [],
+    sshKeys: (payload.ssh_keys && typeof payload.ssh_keys === "object") ? payload.ssh_keys : {},
+  };
 }
+
+// ── SSH key validation ────────────────────────────────────────────────────────
+
+const SSH_KEY_TYPES = new Set([
+  "ssh-rsa", "ssh-dss",
+  "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521",
+  "ssh-ed25519",
+  "sk-ssh-ed25519@openssh.com",
+  "sk-ecdsa-sha2-nistp256@openssh.com",
+]);
+
+// Validates all non-empty lines as SSH public keys.
+// Returns { fingerprints: string[] } on success, or { error: string } on the
+// first invalid line.  Fingerprints are computed via SHA-256 of the raw key
+// blob (same algorithm as `ssh-keygen -l -E sha256`).
+async function validateSshKeys(text) {
+  const lines = text.split("\n");
+  const fingerprints = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const parts = line.split(/\s+/);
+    if (parts.length < 2) return { error: `Line ${i + 1}: missing base64 key data` };
+    if (!SSH_KEY_TYPES.has(parts[0])) return { error: `Line ${i + 1}: unknown key type "${parts[0]}"` };
+    let decoded;
+    try {
+      decoded = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
+    } catch {
+      return { error: `Line ${i + 1}: invalid base64` };
+    }
+    // Verify the wire-format type inside the blob matches the header.
+    // First 4 bytes are a big-endian uint32 length of the algorithm name.
+    if (decoded.length < 4) return { error: `Line ${i + 1}: key data too short` };
+    const typeLen = (decoded[0] << 24 | decoded[1] << 16 | decoded[2] << 8 | decoded[3]) >>> 0;
+    if (4 + typeLen > decoded.length) return { error: `Line ${i + 1}: key data truncated` };
+    const wireType = new TextDecoder().decode(decoded.slice(4, 4 + typeLen));
+    if (wireType !== parts[0]) {
+      return { error: `Line ${i + 1}: key type "${parts[0]}" does not match key data (says "${wireType}")` };
+    }
+    // Compute SHA-256 fingerprint of the raw key blob — same as ssh-keygen -l -E sha256.
+    try {
+      const hashBuf = await crypto.subtle.digest("SHA-256", decoded);
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(hashBuf))).replace(/=+$/, "");
+      fingerprints.push(`SHA256:${b64}`);
+    } catch {
+      return { error: `Line ${i + 1}: could not compute fingerprint` };
+    }
+  }
+  return { fingerprints };
+}
+
+// ── SSH key helpers ───────────────────────────────────────────────────────────
+
+function keyCount(username) {
+  const s = sshKeys[username] || "";
+  return s.split("\n").filter(l => l.trim().length > 0).length;
+}
+
+function sshKeysBtnLabel(username) {
+  const n = keyCount(username);
+  return n > 0 ? `Keys (${n})` : "Add keys";
+}
+
+// Save the current value of any open SSH key textareas back into sshKeys.
+// Must be called before innerHTML is cleared during a re-render.
+function saveAllOpenSshKeys() {
+  document.querySelectorAll(".ssh-key-row:not(.hidden)").forEach(row => {
+    const ta = row.querySelector("textarea");
+    if (!ta) return;
+    const username = ta.dataset.username;
+    const val = ta.value.trim();
+    if (val) sshKeys[username] = val;
+    else delete sshKeys[username];
+  });
+}
+
+window.__toggleSsh = function(username) {
+  const row = document.getElementById("ssh-row-" + username);
+  if (!row) return;
+  row.classList.toggle("hidden");
+  if (!row.classList.contains("hidden")) row.querySelector("textarea").focus();
+};
+
+window.__saveSshKeys = async function(username) {
+  const ta  = document.getElementById("ssh-ta-" + username);
+  const msg = document.getElementById("ssh-err-" + username);
+  if (!ta) return;
+  const val = ta.value.trim();
+  if (!val) {
+    delete sshKeys[username];
+    if (msg) { msg.textContent = ""; msg.className = "ssh-key-error hidden"; }
+    return;
+  }
+  const result = await validateSshKeys(val);
+  if (result.error) {
+    if (msg) { msg.textContent = result.error; msg.className = "ssh-key-error"; }
+    return;
+  }
+  sshKeys[username] = val;
+  if (msg) {
+    msg.textContent = result.fingerprints.join("\n");
+    msg.className = "ssh-key-ok";
+  }
+};
 
 // ── duplicate detection ───────────────────────────────────────────────────────
 
@@ -288,6 +404,7 @@ function updateDuplicateBanner() {
 // ── render ────────────────────────────────────────────────────────────────────
 
 function renderCloud() {
+  saveAllOpenSshKeys();
   const tbody  = document.getElementById("cloud-tbody");
   const empty  = document.getElementById("cloud-empty");
   const wrap   = document.getElementById("cloud-table-wrap");
@@ -309,12 +426,25 @@ function renderCloud() {
       `<td class="mono">${esc(u.username)}</td>` +
       `<td>${esc(u.gecos || "")}</td>` +
       `<td class="dim">${u.uid}</td>` +
-      `<td class="mono dim">${esc(u.shell || "/bin/bash")}</td>`;
+      `<td class="mono dim">${esc(u.shell || "/bin/bash")}</td>` +
+      `<td><button class="btn-link btn-ssh" onclick="window.__toggleSsh('${esc(u.username)}')">${sshKeysBtnLabel(u.username)}</button></td>`;
     tbody.appendChild(tr);
+    const sshTr = document.createElement("tr");
+    sshTr.className = "ssh-key-row hidden";
+    sshTr.id = "ssh-row-" + u.username;
+    sshTr.innerHTML =
+      `<td colspan="5" class="ssh-key-cell">` +
+      `<textarea class="dir-textarea" id="ssh-ta-${esc(u.username)}" data-username="${esc(u.username)}" rows="3" ` +
+      `placeholder="One public key per line (e.g. ssh-ed25519 AAAA...)" ` +
+      `oninput="window.__saveSshKeys('${esc(u.username)}')" ` +
+      `onblur="window.__saveSshKeys('${esc(u.username)}')">${esc(sshKeys[u.username] || "")}</textarea>` +
+      `<div id="ssh-err-${esc(u.username)}" class="ssh-key-error hidden"></div></td>`;
+    tbody.appendChild(sshTr);
   });
 }
 
 function renderLocal() {
+  saveAllOpenSshKeys();
   const tbody = document.getElementById("local-tbody");
   const empty = document.getElementById("local-empty");
   const badge = document.getElementById("local-count-badge");
@@ -338,8 +468,20 @@ function renderLocal() {
       `<td>${esc(u.gecos || "")}</td>` +
       `<td class="dim">${u.uid}</td>` +
       `<td class="mono dim">${esc(u.shell || "/bin/bash")}</td>` +
+      `<td><button class="btn-link btn-ssh" onclick="window.__toggleSsh('${esc(u.username)}')">${sshKeysBtnLabel(u.username)}</button></td>` +
       `<td><button class="btn-link btn-danger" onclick="window.__delUser(${i})">Remove</button></td>`;
     tbody.appendChild(tr);
+    const sshTr = document.createElement("tr");
+    sshTr.className = "ssh-key-row hidden";
+    sshTr.id = "ssh-row-" + u.username;
+    sshTr.innerHTML =
+      `<td colspan="6" class="ssh-key-cell">` +
+      `<textarea class="dir-textarea" id="ssh-ta-${esc(u.username)}" data-username="${esc(u.username)}" rows="3" ` +
+      `placeholder="One public key per line (e.g. ssh-ed25519 AAAA...)" ` +
+      `oninput="window.__saveSshKeys('${esc(u.username)}')" ` +
+      `onblur="window.__saveSshKeys('${esc(u.username)}')">${esc(sshKeys[u.username] || "")}</textarea>` +
+      `<div id="ssh-err-${esc(u.username)}" class="ssh-key-error hidden"></div></td>`;
+    tbody.appendChild(sshTr);
   });
 }
 
@@ -385,10 +527,14 @@ async function handleDecrypt() {
   setStatus("decrypt-status", "Decrypting…", "status-muted");
   try {
     identity = keyText;
-    [cloudUsers, localUsers] = await Promise.all([
+    const [cloudResult, localResult] = await Promise.all([
       decryptBlob(CLOUD_SNAPSHOT_B64, identity),
       decryptBlob(LOCAL_SNAPSHOT_B64, identity),
     ]);
+    cloudUsers = cloudResult.users;
+    localUsers = localResult.users;
+    // Merge ssh_keys; local snapshot wins on conflict
+    sshKeys = Object.assign({}, cloudResult.sshKeys, localResult.sshKeys);
     renderAll();
     document.getElementById("directory-section").classList.remove("hidden");
     const total = cloudUsers.length + localUsers.length;
@@ -402,10 +548,11 @@ async function handleDecrypt() {
 
 // ── add user ──────────────────────────────────────────────────────────────────
 
-function handleAddUser() {
+async function handleAddUser() {
   const username = document.getElementById("new-username").value.trim();
   const gecos    = document.getElementById("new-gecos").value.trim();
   const shell    = document.getElementById("new-shell").value.trim() || "/bin/bash";
+  const keys     = document.getElementById("new-ssh-keys").value.trim();
   const warn     = document.getElementById("add-conflict-warning");
 
   if (!username) { alert("Username is required."); return; }
@@ -420,6 +567,12 @@ function handleAddUser() {
   }
   warn.classList.add("hidden");
 
+  if (keys) {
+    const result = await validateSshKeys(keys);
+    if (result.error) { alert("Invalid SSH key: " + result.error); return; }
+    sshKeys[username] = keys;
+  }
+
   localUsers.push({
     username,
     uid:   nextUid(),
@@ -430,9 +583,10 @@ function handleAddUser() {
   });
   renderAll();
   document.getElementById("add-user-form").classList.add("hidden");
-  document.getElementById("new-username").value = "";
-  document.getElementById("new-gecos").value    = "";
-  document.getElementById("new-shell").value    = "/bin/bash";
+  document.getElementById("new-username").value  = "";
+  document.getElementById("new-gecos").value     = "";
+  document.getElementById("new-shell").value     = "/bin/bash";
+  document.getElementById("new-ssh-keys").value  = "";
 }
 
 // ── save (local blob only) ────────────────────────────────────────────────────
@@ -442,15 +596,18 @@ async function handleSave() {
     setStatus("save-status", "Decrypt first.", "status-error");
     return;
   }
+  // Flush any open SSH key textareas before encrypting
+  saveAllOpenSshKeys();
   setStatus("save-status",
     "Encrypting " + localUsers.length + " local user" + (localUsers.length === 1 ? "" : "s") + "…",
     "status-muted");
   try {
     const payload = {
-      users:  localUsers,
-      groups: localUsers.length === 0 ? [] : [
+      users:    localUsers,
+      groups:   localUsers.length === 0 ? [] : [
         { name: LOCAL_GROUP_NAME, gid: LOCAL_GROUP_GID, members: localUsers.map(u => u.username) },
       ],
+      ssh_keys: sshKeys,
     };
     const jsonBytes = new TextEncoder().encode(JSON.stringify(payload));
     const gzipped   = await gzipBytes(jsonBytes);
@@ -678,6 +835,12 @@ renderAll = function() {
     }
     .btn-danger { color: var(--danger); }
     .btn-danger:hover { text-decoration: underline; }
+    .btn-ssh { color: var(--accent); }
+    .btn-ssh:hover { text-decoration: underline; }
+    .ssh-key-row td { border-top: none !important; }
+    .ssh-key-cell { background: var(--surface2); padding: 0.25rem 0.75rem 0.75rem !important; }
+    .ssh-key-error { color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem; }
+    .ssh-key-ok { color: var(--success, #2a9d5c); font-size: 0.75rem; margin-top: 0.25rem; font-family: monospace; white-space: pre; }
     CSS
   end
 end
