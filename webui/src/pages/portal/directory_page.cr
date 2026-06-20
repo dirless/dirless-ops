@@ -60,7 +60,7 @@ class Portal::DirectoryPage < PortalLayout
           text "No keypair registered yet"
         end
         para class: "dir-keygen-desc" do
-          text "Generate an age keypair in your browser. The private key will be downloaded to your computer and never sent to our servers. Keep it safe — it cannot be recovered if lost."
+          text "Generate an age keypair in your browser. The private key will be downloaded to your computer and never sent to our servers. Keep it safe. It cannot be recovered if lost."
         end
         div class: "dir-row" do
           button id: "keygen-btn", type: "button", class: "btn btn-success" do
