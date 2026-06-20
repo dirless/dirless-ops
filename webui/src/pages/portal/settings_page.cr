@@ -69,7 +69,7 @@ class Portal::SettingsPage < PortalLayout
           para "Sends a magic link to the user's email to verify identity and register their keypair."
         end
         div class: "s-connect-step" do
-          strong "3. Get a certificate (daily)"
+          strong "3. Get a certificate (per TTL)"
           raw "<pre class=\"s-code\">dirless-connect ssh login</pre>"
           para "Issues a fresh SSH certificate valid for the configured TTL."
         end
