@@ -1,12 +1,12 @@
 name: dirless-ops-webui
-version: 0.1.0
+version: 0.1.5
 
 description: Web UI for the Dirless ops daemon
 
 authors:
-  - Dirless <hello@dirless.io>
+  - Dirless <info@dirless.com>
 
-license: Private
+license: Apache-2.0
 
 crystal: ">= 1.9.0"
 

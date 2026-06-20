@@ -37,6 +37,8 @@ abstract class PortalLayout
                 class: "nav-item#{active_nav == "dashboard" ? " nav-item-active" : ""}"
               a "Directory", href: "/directory",
                 class: "nav-item#{active_nav == "directory" ? " nav-item-active" : ""}"
+              a "Settings", href: "/settings",
+                class: "nav-item#{active_nav == "settings" ? " nav-item-active" : ""}"
             end
             div class: "sidebar-footer" do
               div class: "sidebar-user" do
