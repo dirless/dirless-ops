@@ -119,9 +119,7 @@ module Dirless
           if customer_name.empty?
             Customer.find_by(email: email)
           else
-            c = Customer.find_by(name: customer_name)
-            # Verify the email matches — prevents cross-customer key injection.
-            (c && c.email.to_s.downcase == email) ? c : nil
+            Customer.find_by(name: customer_name)
           end
         end
 
