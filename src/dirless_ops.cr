@@ -1,4 +1,5 @@
 require "grip"
+require "ssh-crystal"
 require "./dirless/ops/config"
 require "./dirless/ops/db"
 require "./dirless/ops/notifier"
@@ -16,6 +17,9 @@ require "./dirless/ops/models/customer"
 require "./dirless/ops/models/node"
 require "./dirless/ops/models/health_check"
 require "./dirless/ops/models/provision_job"
+require "./dirless/ops/models/ssh_bootstrap_token"
+require "./dirless/ops/models/ssh_user_registration"
+require "./dirless/ops/models/ssh_challenge"
 require "./dirless/ops/deployer"
 require "./dirless/ops/node_prober"
 
@@ -37,6 +41,8 @@ require "./dirless/ops/routes/status"
 require "./dirless/ops/routes/portal"
 require "./dirless/ops/routes/provision_jobs"
 require "./dirless/ops/routes/directory"
+require "./dirless/ops/routes/bootstrap"
+require "./dirless/ops/routes/cert"
 
 module Dirless
   module Ops
@@ -107,11 +113,14 @@ module Dirless
             get "/:name", Controllers::GetCustomer
             patch "/:name", Controllers::UpdateCustomer
             delete "/:name", Controllers::DeleteCustomer
+            get "/:name/directory/public-key", Controllers::GetAgePublicKey
+            put "/:name/directory/public-key", Controllers::PutAgePublicKey
             get "/:name/directory/snapshot", Controllers::GetDirectorySnapshot
             post "/:name/directory/snapshot", Controllers::PushDirectorySnapshot
             get "/:name/directory/snapshot/aws-identity-center", Controllers::GetCloudSnapshot
             get "/:name/directory/snapshot/local", Controllers::GetLocalSnapshot
             post "/:name/directory/snapshot/local", Controllers::PushLocalSnapshot
+            delete "/:name/directory/snapshot/local", Controllers::DeleteLocalSnapshot
           end
 
           scope "/nodes" do
@@ -131,6 +140,17 @@ module Dirless
             get "/checkout/:session_id", Controllers::PortalVerifyCheckout
             get "/verify-email", Controllers::PortalVerifyEmail
             post "/resend-verification", Controllers::PortalResendVerification
+            patch "/settings", Controllers::PortalUpdateSettings
+
+            scope "/bootstrap" do
+              post "/request", Controllers::BootstrapRequest
+              get "/confirm", Controllers::BootstrapConfirm
+            end
+
+            scope "/cert" do
+              post "/challenge", Controllers::CertChallenge
+              post "/sign", Controllers::CertSign
+            end
           end
 
           scope "/provision-jobs" do

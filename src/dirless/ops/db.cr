@@ -148,6 +148,57 @@ module Dirless
       "ALTER TABLE provision_jobs ADD COLUMN reset_count INTEGER",
       # Migration: per-customer server limit (derived from plan, admin-overridable).
       "ALTER TABLE customers ADD COLUMN server_limit INTEGER",
+      # Migration: per-customer SSH CA keypair and cert TTL for dirless-connect.
+      "ALTER TABLE customers ADD COLUMN ca_private_key TEXT",
+      "ALTER TABLE customers ADD COLUMN ca_public_key TEXT",
+      "ALTER TABLE customers ADD COLUMN cert_ttl_seconds INTEGER",
+      # SSH CA: one-time bootstrap tokens (magic link email flow).
+      <<-SQL,
+        CREATE TABLE IF NOT EXISTS ssh_bootstrap_tokens (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          token TEXT NOT NULL,
+          customer_name TEXT NOT NULL,
+          username TEXT NOT NULL,
+          email TEXT NOT NULL,
+          age_public_key TEXT NOT NULL,
+          ssh_public_key TEXT NOT NULL,
+          used INTEGER NOT NULL DEFAULT 0,
+          expires_at DATETIME NOT NULL,
+          created_at DATETIME,
+          updated_at DATETIME
+        )
+      SQL
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_bootstrap_token ON ssh_bootstrap_tokens (token)",
+      "CREATE INDEX IF NOT EXISTS idx_ssh_bootstrap_customer ON ssh_bootstrap_tokens (customer_name)",
+      # SSH CA: registered user keypairs (age public key + SSH public key per user).
+      <<-SQL,
+        CREATE TABLE IF NOT EXISTS ssh_user_registrations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_name TEXT NOT NULL,
+          username TEXT NOT NULL,
+          email TEXT NOT NULL,
+          age_public_key TEXT NOT NULL,
+          ssh_public_key TEXT NOT NULL,
+          created_at DATETIME,
+          updated_at DATETIME
+        )
+      SQL
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_user_reg ON ssh_user_registrations (customer_name, username)",
+      # SSH CA: in-flight age challenges (nonce encrypted to user, 60s expiry).
+      # nonce_hash = SHA256(nonce_plaintext) — plaintext is never persisted so a
+      # DB dump cannot be used to mint certificates without the user's age private key.
+      <<-SQL,
+        CREATE TABLE IF NOT EXISTS ssh_challenges (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_name TEXT NOT NULL,
+          username TEXT NOT NULL,
+          nonce_hash TEXT NOT NULL,
+          expires_at DATETIME NOT NULL,
+          created_at DATETIME,
+          updated_at DATETIME
+        )
+      SQL
+      "CREATE INDEX IF NOT EXISTS idx_ssh_challenges_user ON ssh_challenges (customer_name, username)",
     ]
 
     def self.setup_db(database_path : String)

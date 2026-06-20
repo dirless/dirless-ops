@@ -99,6 +99,43 @@ module Dirless
           post("/v1/portal/resend-verification", {"customer_name" => customer_name})
         end
 
+        # Confirms an SSH bootstrap magic-link token.
+        # Returns {customer_name, username} on success; raises DaemonClient::Error on failure.
+        def confirm_bootstrap(token : String) : {String, String}
+          response = HTTP::Client.get(
+            "#{@url}/v1/portal/bootstrap/confirm?token=#{URI.encode_path(token)}",
+            headers: auth_headers,
+          )
+          check!(response)
+          parsed = JSON.parse(response.body)
+          {
+            parsed["customer_name"].as_s,
+            parsed["username"].as_s,
+          }
+        end
+
+        # Registers an age public key for this customer (used when the customer
+        # generates a keypair in-browser, before the syncer has run).
+        def register_age_public_key(customer_name : String, public_key : String) : Nil
+          response = HTTP::Client.put(
+            "#{@url}/v1/customers/#{customer_name}/directory/public-key",
+            headers: json_headers,
+            body: {"age_public_key" => public_key}.to_json,
+          )
+          check!(response)
+        end
+
+        # Returns the age public key registered by the syncer for this customer,
+        # or nil if the syncer has never run.
+        def fetch_age_public_key(customer_name : String) : String?
+          response = HTTP::Client.get(
+            "#{@url}/v1/customers/#{customer_name}/directory/public-key",
+            headers: auth_headers,
+          )
+          return nil unless response.success?
+          JSON.parse(response.body)["age_public_key"]?.try(&.as_s?)
+        end
+
         # Returns the base64-encoded cloud-sourced (aws-identity-center) snapshot blob,
         # or nil if no cloud snapshot exists yet (HTTP 204).
         def fetch_cloud_snapshot(customer_name : String) : String?
@@ -111,12 +148,32 @@ module Dirless
           fetch_blob("/v1/customers/#{customer_name}/directory/snapshot/local")
         end
 
+        # Deletes the portal-managed local users snapshot (used during key recovery).
+        def delete_local_snapshot(customer_name : String) : Nil
+          response = HTTP::Client.delete(
+            "#{@url}/v1/customers/#{customer_name}/directory/snapshot/local",
+            headers: auth_headers,
+          )
+          check!(response)
+        end
+
         # Pushes a base64-encoded encrypted local users blob to the customer's backend.
         # The *recipient* is the age public key used to encrypt the blob.
         def push_local_snapshot(customer_name : String, blob_b64 : String, recipient : String = "") : Nil
           payload = {"blob" => blob_b64}
           payload["recipient"] = recipient unless recipient.empty?
           post("/v1/customers/#{customer_name}/directory/snapshot/local", payload)
+        end
+
+        # Updates the cert TTL for a customer. Unit: seconds.
+        # min: 3600 (1 hour), max: 2_592_000 (30 days).
+        def update_cert_ttl(customer_name : String, cert_ttl_seconds : Int64) : Nil
+          response = HTTP::Client.patch(
+            "#{@url}/v1/portal/settings",
+            headers: json_headers,
+            body: {"customer_name" => customer_name, "cert_ttl_seconds" => cert_ttl_seconds}.to_json,
+          )
+          check!(response)
         end
 
         private def fetch_blob(path : String) : String?

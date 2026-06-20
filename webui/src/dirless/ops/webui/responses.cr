@@ -24,6 +24,7 @@ module Dirless
         property provisioned : Bool?
         property email_verified : Bool?
         property plan : String?
+        property cert_ttl_seconds : Int64?
       end
 
       struct NodeResponse

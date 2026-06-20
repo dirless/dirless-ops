@@ -6,13 +6,24 @@ module Dirless
     class ApiKeyHandler
       include HTTP::Handler
 
+      # Exact path exemptions.
       EXEMPT_PATHS = ["/v1/health"]
+
+      # Prefix exemptions — any path under these is public.
+      # Bootstrap and cert endpoints are protected by their own credentials
+      # (magic-link tokens and age challenge-response nonces), not the ops API key.
+      EXEMPT_PREFIXES = [
+        "/v1/portal/bootstrap/",
+        "/v1/portal/cert/",
+      ]
 
       def initialize(@api_key : String)
       end
 
       def call(context : HTTP::Server::Context)
-        return call_next(context) if EXEMPT_PATHS.includes?(context.request.path)
+        path = context.request.path
+        return call_next(context) if EXEMPT_PATHS.includes?(path)
+        return call_next(context) if EXEMPT_PREFIXES.any? { |p| path.starts_with?(p) }
 
         auth = context.request.headers["Authorization"]?
         token = auth.try { |header| header.starts_with?("Bearer ") ? header[7..] : nil }

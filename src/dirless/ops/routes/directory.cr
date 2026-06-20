@@ -168,6 +168,78 @@ module Dirless
         end
       end
 
+      # GET /v1/customers/:name/directory/public-key
+      # Returns the registered age public key for this tenant, or null if not yet set.
+      class GetAgePublicKey
+        include Grip::Controllers::HTTP
+        include DirectoryHelper
+        include DirectoryHTTP
+
+        def get(context : Context) : Context
+          name = context.fetch_path_params["name"]
+          result = resolve_context(context, name)
+          return context unless result
+
+          customer, tenant_id, primary_node = result
+          hostname = "#{customer.name}.#{Ops.config.backend_domain}"
+
+          begin
+            status_code, body = backend_get(primary_node.ip, hostname,
+              "/v1/snapshot/public-key", customer.hmac_secret, tenant_id)
+            case status_code
+            when 200
+              context.put_status(200).json(JSON.parse(body)).halt
+            else
+              context.put_status(502).json({"error" => "backend returned HTTP #{status_code}"}).halt
+            end
+          rescue ex
+            context.put_status(502).json({"error" => "backend unreachable: #{ex.message}"}).halt
+          end
+        end
+      end
+
+      # PUT /v1/customers/:name/directory/public-key
+      # Registers or updates the age public key for this tenant.
+      # Used by the portal when a customer generates a keypair in-browser.
+      class PutAgePublicKey
+        include Grip::Controllers::HTTP
+        include DirectoryHelper
+        include DirectoryHTTP
+
+        def put(context : Context) : Context
+          name = context.fetch_path_params["name"]
+          result = resolve_context(context, name)
+          return context unless result
+
+          customer, tenant_id, primary_node = result
+          hostname = "#{customer.name}.#{Ops.config.backend_domain}"
+
+          body = context.request.body.try(&.gets_to_end) || ""
+
+          begin
+            tls = OpenSSL::SSL::Context::Client.new
+            client = Dirless::Net::TargetedClient.new(primary_node.ip, hostname, 443, tls)
+            client.connect_timeout = 10.seconds
+            client.read_timeout = 30.seconds
+            headers = HTTP::Headers{
+              "Authorization" => "Bearer #{customer.hmac_secret}",
+              "X-Tenant-ID"   => tenant_id,
+              "Content-Type"  => "application/json",
+            }
+            response = client.put("/v1/snapshot/public-key", headers: headers, body: body)
+            client.close rescue nil
+            case response.status_code
+            when 200
+              context.put_status(200).json({"status" => "ok"}).halt
+            else
+              context.put_status(502).json({"error" => "backend returned HTTP #{response.status_code}: #{response.body}"}).halt
+            end
+          rescue ex
+            context.put_status(502).json({"error" => "backend unreachable: #{ex.message}"}).halt
+          end
+        end
+      end
+
       # GET /v1/customers/:name/directory/snapshot/aws-identity-center
       # Fetches the cloud-sourced (read-only) encrypted snapshot blob.
       # Returns {"blob": "<base64>"} or 204 if no snapshot yet.
@@ -178,6 +250,39 @@ module Dirless
 
         def get(context : Context) : Context
           proxy_blob_get(context, "/v1/snapshot/aws-identity-center")
+        end
+      end
+
+      # DELETE /v1/customers/:name/directory/snapshot/local
+      # Wipes the portal-managed local users snapshot (e.g. during key recovery).
+      class DeleteLocalSnapshot
+        include Grip::Controllers::HTTP
+        include DirectoryHelper
+        include DirectoryHTTP
+
+        def delete(context : Context) : Context
+          name = context.fetch_path_params["name"]
+          result = resolve_context(context, name)
+          return context unless result
+
+          customer, tenant_id, primary_node = result
+          hostname = "#{customer.name}.#{Ops.config.backend_domain}"
+
+          begin
+            tls = OpenSSL::SSL::Context::Client.new
+            client = Dirless::Net::TargetedClient.new(primary_node.ip, hostname, 443, tls)
+            client.connect_timeout = 10.seconds
+            client.read_timeout = 30.seconds
+            headers = HTTP::Headers{
+              "Authorization" => "Bearer #{customer.hmac_secret}",
+              "X-Tenant-ID"   => tenant_id,
+            }
+            response = client.delete("/v1/snapshot/local", headers: headers)
+            client.close rescue nil
+            context.put_status(response.status_code).json({"status" => "ok"}).halt
+          rescue ex
+            context.put_status(502).json({"error" => "backend unreachable: #{ex.message}"}).halt
+          end
         end
       end
 

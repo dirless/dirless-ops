@@ -298,6 +298,50 @@ module Dirless
         end
       end
 
+      # PATCH /v1/portal/settings
+      # Accepts {customer_name, cert_ttl_seconds}. Updates the customer's cert TTL.
+      # Validated: minimum 3600 (1 hour), maximum 2_592_000 (30 days).
+      class PortalUpdateSettings
+        include Grip::Controllers::HTTP
+
+        MIN_TTL =       3_600_i64  # 1 hour
+        MAX_TTL = 2_592_000_i64  # 30 days
+
+        def patch(context : Context) : Context
+          body = context.request.body.try(&.gets_to_end) || ""
+          begin
+            parsed = JSON.parse(body)
+          rescue ex : JSON::ParseException
+            return context.put_status(400).json({"error" => "malformed JSON"}).halt
+          end
+
+          customer_name    = parsed["customer_name"]?.try(&.as_s).to_s.strip
+          cert_ttl_seconds = parsed["cert_ttl_seconds"]?.try(&.as_i64?)
+
+          return context.put_status(422).json({"error" => "customer_name required"}).halt if customer_name.empty?
+          return context.put_status(422).json({"error" => "cert_ttl_seconds required"}).halt unless cert_ttl_seconds
+
+          if cert_ttl_seconds < MIN_TTL || cert_ttl_seconds > MAX_TTL
+            return context.put_status(422).json({
+              "error" => "cert_ttl_seconds must be between #{MIN_TTL} (1 hour) and #{MAX_TTL} (30 days)",
+            }).halt
+          end
+
+          customer = Customer.find_by(name: customer_name)
+          return context.put_status(404).json({"error" => "customer not found"}).halt unless customer
+
+          customer.cert_ttl_seconds = cert_ttl_seconds
+          unless customer.save
+            return context.put_status(503).json({"error" => "could not save settings"}).halt
+          end
+
+          context.put_status(200).json({
+            "ok"               => true,
+            "cert_ttl_seconds" => cert_ttl_seconds,
+          }).halt
+        end
+      end
+
       class PortalLogin
         include Grip::Controllers::HTTP
 

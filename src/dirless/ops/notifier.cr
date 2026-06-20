@@ -1,4 +1,5 @@
 require "log"
+require "uri"
 
 module Dirless
   module Ops
@@ -134,6 +135,24 @@ module Dirless
         - The Dirless team
         BODY
         queue(email, "⚠ Age key mismatch on #{hostname} - action required", body)
+      end
+
+      def ssh_bootstrap_magic_link(email : String, username : String, token : String)
+        link = "#{@portal_url}/directory/bootstrap/confirm?token=#{URI.encode_path(token)}"
+        body = <<-BODY
+        Hi #{username},
+
+        Someone requested an SSH certificate registration for your Dirless account.
+
+        Click the link below to complete registration. This link expires in 10 minutes.
+
+          #{link}
+
+        If you did not request this, you can safely ignore this email.
+
+        - The Dirless team
+        BODY
+        queue(email, "Complete your Dirless SSH certificate registration", body)
       end
 
       def probe_failing(node_name : String, node_ip : String, error : String, count : Int32)

@@ -29,6 +29,9 @@ module Dirless
       column beta_customer : Bool?
       column plan : String?
       column server_limit : Int64?
+      column ca_private_key : String?
+      column ca_public_key : String?
+      column cert_ttl_seconds : Int64?
 
       timestamps
 
@@ -72,8 +75,10 @@ module Dirless
           "country"        => country,
           "provisioned"    => provisioned,
           "email_verified" => email_verified,
-          "plan"           => plan || "free",
-          "server_limit"   => server_limit || Customer.limit_for_plan(plan),
+          "plan"              => plan || "free",
+          "server_limit"      => server_limit || Customer.limit_for_plan(plan),
+          "ca_public_key"     => ca_public_key,
+          "cert_ttl_seconds"  => cert_ttl_seconds,
           "created_at"     => created_at.try(&.to_rfc3339),
           "updated_at"     => updated_at.try(&.to_rfc3339),
         }

@@ -1,9 +1,10 @@
 class Portal::DirectoryPage < PortalLayout
   needs cloud_snapshot_blob : String?
   needs local_snapshot_blob : String?
+  needs age_public_key : String? = nil
   needs backend_error : String? = nil
   needs provisioned : Bool = true
-
+  needs recently_created : Bool = false
   # UIDs/GIDs for locally-added users start above this floor so they never
   # collide with IAM Identity Center-allocated IDs (which start at 1000).
   LOCAL_UID_FLOOR  = 100_000
@@ -21,24 +22,57 @@ class Portal::DirectoryPage < PortalLayout
   def content
     raw "<style>#{dir_css}</style>"
 
+    if @backend_error
+      if @recently_created
+        div class: "banner banner-info" do
+          text "⚙ Your backend is still being provisioned. This usually takes about 10 minutes - check back shortly."
+        end
+        return
+      else
+        div class: "banner banner-info" do
+          text "⚙ Your backend is currently unreachable. This is usually temporary - check back in a few minutes. If the problem persists, contact support."
+        end
+      end
+    end
+
     unless @provisioned
       div class: "banner banner-info" do
-        text "⚙ Your backend is being provisioned. This usually takes a few minutes — check back shortly."
+        text "⚙ Your backend is still being provisioned. This usually takes about 10 minutes - check back shortly."
       end
       return
     end
 
-    if err = @backend_error
-      div class: "banner banner-error" do
-        text "⚠ Could not reach backend: #{err}"
-      end
-    end
+    dir_panel_content
+  end
 
+  private def dir_panel_content
     div class: "banner banner-info" do
       text "Manage your Dirless directory. "
       strong "Your private key never leaves the browser"
       text " — decryption and re-encryption happen locally. "
       a "Don't have a key? Learn how to generate one →", href: "https://dirless.com/age-keypair.html", target: "_blank"
+    end
+
+    # Keypair generator — only shown when no key is registered yet
+    if @age_public_key.nil?
+      div id: "keygen-card", class: "dir-card" do
+        div class: "dir-card-title" do
+          text "No keypair registered yet"
+        end
+        para class: "dir-keygen-desc" do
+          text "Generate an age keypair in your browser. The private key will be downloaded to your computer and never sent to our servers. Keep it safe — it cannot be recovered if lost."
+        end
+        div class: "dir-row" do
+          button id: "keygen-btn", type: "button", class: "btn btn-success" do
+            text "Generate keypair"
+          end
+          span id: "keygen-status", class: "dir-status" do
+          end
+        end
+        form id: "keygen-form", action: "/directory/register-key", method: "post", class: "hidden" do
+          input type: "hidden", name: "age_public_key", id: "keygen-pubkey-input"
+        end
+      end
     end
 
     # Step 1: Private key
@@ -47,6 +81,35 @@ class Portal::DirectoryPage < PortalLayout
         text "Step 1 — Enter age private key"
       end
       label "Private key", for: "private-key-input", class: "dir-label"
+      if key = @age_public_key
+        div class: "dir-key-hint" do
+          text "Your syncer has already registered key "
+          code key
+          text " — paste the matching private key below."
+        end
+        div class: "dir-recover-wrap" do
+          a "Lost your key?", href: "#", id: "recover-toggle", class: "dir-recover-link"
+          div id: "recover-section", class: "hidden dir-recover-box" do
+            para class: "dir-recover-warning" do
+              strong "Warning: "
+              text "This will permanently delete all local users. The syncer will need to be " \
+                   "re-enrolled on your EC2 instance with "
+              code "dirless-cli enroll --overwrite-existing"
+              text " after the reset."
+            end
+            div class: "dir-row" do
+              button id: "recover-btn", type: "button", class: "btn btn-danger-outline" do
+                text "Generate new keypair & reset"
+              end
+              span id: "recover-status", class: "dir-status" do
+              end
+            end
+            form id: "recover-form", action: "/directory/recover-key", method: "post", class: "hidden" do
+              input type: "hidden", name: "age_public_key", id: "recover-pubkey-input"
+            end
+          end
+        end
+      end
       textarea id: "private-key-input", rows: "2",
         class: "dir-textarea",
         placeholder: "AGE-SECRET-KEY-1..." do
@@ -636,6 +699,73 @@ async function handleSave() {
   }
 }
 
+// ── keypair generation ────────────────────────────────────────────────────────
+
+const keygenBtn = document.getElementById("keygen-btn");
+if (keygenBtn) {
+  keygenBtn.addEventListener("click", async () => {
+    setStatus("keygen-status", "Generating…", "status-muted");
+    try {
+      const secretKey = await age.generateIdentity();
+      const publicKey = await age.identityToRecipient(secretKey);
+
+      // Download the private key as a file
+      const blob = new Blob([secretKey + "\n"], { type: "text/plain" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = "dirless-age.key";
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Pre-fill the private key textarea so they can use it immediately
+      const ta = document.getElementById("private-key-input");
+      if (ta) ta.value = secretKey;
+
+      // Submit the public key for registration
+      document.getElementById("keygen-pubkey-input").value = publicKey;
+      document.getElementById("keygen-form").submit();
+    } catch (err) {
+      setStatus("keygen-status", "Error: " + err.message, "status-error");
+    }
+  });
+}
+
+// ── key recovery ──────────────────────────────────────────────────────────────
+
+const recoverToggle = document.getElementById("recover-toggle");
+if (recoverToggle) {
+  recoverToggle.addEventListener("click", e => {
+    e.preventDefault();
+    document.getElementById("recover-section").classList.toggle("hidden");
+  });
+}
+
+const recoverBtn = document.getElementById("recover-btn");
+if (recoverBtn) {
+  recoverBtn.addEventListener("click", async () => {
+    if (!confirm("This will permanently delete all local users and reset your key. Are you sure?")) return;
+    setStatus("recover-status", "Generating…", "status-muted");
+    try {
+      const secretKey = await age.generateIdentity();
+      const publicKey = await age.identityToRecipient(secretKey);
+
+      const blob = new Blob([secretKey + "\n"], { type: "text/plain" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = "dirless-age.key";
+      a.click();
+      URL.revokeObjectURL(url);
+
+      document.getElementById("recover-pubkey-input").value = publicKey;
+      document.getElementById("recover-form").submit();
+    } catch (err) {
+      setStatus("recover-status", "Error: " + err.message, "status-error");
+    }
+  });
+}
+
 // ── events ────────────────────────────────────────────────────────────────────
 
 document.getElementById("decrypt-btn").addEventListener("click", handleDecrypt);
@@ -719,6 +849,49 @@ renderAll = function() {
       font-weight: 600;
       color: var(--muted);
       margin-bottom: 0.35rem;
+    }
+    .dir-keygen-desc {
+      font-size: 0.875rem;
+      color: var(--text-dim);
+      margin: 0 0 1rem;
+      line-height: 1.5;
+    }
+    .dir-recover-wrap { margin-top: 0.5rem; }
+    .dir-recover-link {
+      font-size: 0.8rem;
+      color: var(--danger);
+      text-decoration: none;
+    }
+    .dir-recover-link:hover { text-decoration: underline; }
+    .dir-recover-box {
+      margin-top: 0.75rem;
+      background: rgba(248, 81, 73, 0.05);
+      border: 1px solid rgba(248, 81, 73, 0.25);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+    }
+    .dir-recover-warning {
+      font-size: 0.825rem;
+      color: var(--text-dim);
+      margin: 0 0 0.75rem;
+      line-height: 1.5;
+    }
+    .btn-danger-outline {
+      background: transparent;
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+    .btn-danger-outline:hover { background: rgba(248, 81, 73, 0.1); opacity: 1; }
+    .dir-key-hint {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+    .dir-key-hint code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.78rem;
+      color: var(--accent);
+      word-break: break-all;
     }
     .dir-textarea {
       width: 100%;

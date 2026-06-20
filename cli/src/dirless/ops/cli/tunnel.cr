@@ -83,15 +83,15 @@ module Dirless
         end
 
         private def self.wait_for_port(port : Int32) : Nil
-          25.times do
+          30.times do
             if port_open?(port)
               puts "ready."
               return
             end
-            sleep 0.4.seconds
+            sleep 1.second
           end
           puts ""
-          STDERR.puts "Error: SSH tunnel did not come up within 10 seconds."
+          STDERR.puts "Error: SSH tunnel did not come up within 30 seconds."
           STDERR.puts "Check that the key at #{Config::DEFAULT_SSH_KEY} is correct,"
           STDERR.puts "or pass --private-ssh-key <path> to specify a different one."
           exit 1

@@ -41,6 +41,7 @@ module Dirless
             unless dns_ok
               Log.warn { "DNS update failed (non-fatal): #{dns_output}" }
             end
+            generate_and_store_ca(customer_name, hmac_secret)
             api_patch("/v1/provision-jobs/#{job_id}", {"status" => "completed"})
             notify_environment_ready(customer_name)
             Log.info { "Provision job ##{job_id} completed successfully" }
@@ -50,6 +51,22 @@ module Dirless
             api_patch("/v1/provision-jobs/#{job_id}", {"status" => "failed", "error" => truncated})
             Log.error { "Provision job ##{job_id} failed: #{truncated}" }
           end
+        end
+
+        private def generate_and_store_ca(customer_name : String, hmac_secret : String) : Nil
+          # Skip if this customer already has a CA keypair.
+          customer = api_get("/v1/customers/#{customer_name}") rescue return
+          return if customer["ca_public_key"]?.try(&.as_s?)
+
+          private_key, public_key = SSH::PrivateKey.generate("dirless-ca-#{customer_name}")
+
+          api_patch("/v1/customers/#{customer_name}", {
+            "ca_private_key" => private_key,
+            "ca_public_key"  => public_key,
+          })
+          Log.info { "SSH CA keypair generated and stored for #{customer_name}" }
+        rescue ex
+          Log.error { "generate_and_store_ca failed for #{customer_name}: #{ex.message}" }
         end
 
         def run_deprovision
@@ -84,8 +101,7 @@ module Dirless
         def run_deprovision_ansible(customer_name : String, playbook : String) : {Bool, String}
           vars_json = {"customer_name" => customer_name}.to_json
           tmp_vars = "/tmp/dirless-deprovision-#{Random::Secure.hex(8)}.json"
-          File.write(tmp_vars, vars_json)
-          File.chmod(tmp_vars, 0o600)
+          File.open(tmp_vars, "w", perm: 0o600) { |f| f.print(vars_json) }
 
           args = ["-i", @ansible_inventory, playbook, "-e", "@#{tmp_vars}", "--diff"]
 
@@ -181,8 +197,7 @@ module Dirless
           # Ansible resolves /dev/stdin to the actual pipe path (/proc/PID/fd/pipe:...)
           # on some systems, which it then can't open via its file-access layer.
           tmp_vars = "/tmp/dirless-provision-#{Random::Secure.hex(8)}.json"
-          File.write(tmp_vars, customer_json)
-          File.chmod(tmp_vars, 0o600)
+          File.open(tmp_vars, "w", perm: 0o600) { |f| f.print(customer_json) }
 
           args = [
             "-i", @ansible_inventory,
