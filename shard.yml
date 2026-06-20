@@ -1,12 +1,12 @@
 name: dirless-ops
-version: 0.1.0
+version: 0.1.4
 
 description: Centralized operations daemon for Dirless
 
 authors:
-  - Dirless <hello@dirless.io>
+  - Dirless <info@dirless.com>
 
-license: Private
+license: Apache-2.0
 
 crystal: ">= 1.20.0"
 
@@ -29,6 +29,14 @@ dependencies:
 
   dirless-http:
     github: dirless/dirless-http
+
+  age-crystal:
+    github: dirless/age-crystal
+    version: 0.2.1
+
+  ssh-crystal:
+    github: dirless/ssh-crystal
+    version: 0.1.1
 
 development_dependencies:
   ameba:

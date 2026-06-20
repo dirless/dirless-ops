@@ -1,5 +1,9 @@
 version: 2.0
 shards:
+  age-crystal:
+    git: https://github.com/dirless/age-crystal.git
+    version: 0.2.1
+
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
     version: 1.6.4
@@ -31,6 +35,10 @@ shards:
   radix:
     git: https://github.com/luislavena/radix.git
     version: 0.4.1
+
+  ssh-crystal:
+    git: https://github.com/dirless/ssh-crystal.git
+    version: 0.1.1
 
   toml:
     git: https://github.com/crystal-community/toml.cr.git
