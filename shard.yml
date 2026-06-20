@@ -29,6 +29,7 @@ dependencies:
 
   dirless-http:
     github: dirless/dirless-http
+    version: "~> 1.0.0"
 
   age-crystal:
     github: dirless/age-crystal
