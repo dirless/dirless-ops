@@ -18,7 +18,7 @@ shards:
 
   dirless-http:
     git: https://github.com/dirless/dirless-http.git
-    version: 0.1.0+git.commit.0af3bd572b1f184aeef9e003a4bc97339577901e
+    version: 1.0.0
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
