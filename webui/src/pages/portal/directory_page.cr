@@ -150,6 +150,7 @@ class Portal::DirectoryPage < PortalLayout
               tr do
                 th "Username"
                 th "Display name"
+                th "Email"
                 th "UID"
                 th "Shell"
                 th "SSH Keys"
@@ -192,6 +193,10 @@ class Portal::DirectoryPage < PortalLayout
               input type: "text", id: "new-gecos", class: "dir-input", placeholder: "Alice Smith"
             end
             div do
+              label "Email", for: "new-email", class: "dir-label"
+              input type: "email", id: "new-email", class: "dir-input", placeholder: "alice@example.com"
+            end
+            div do
               label "Shell", for: "new-shell", class: "dir-label"
               input type: "text", id: "new-shell", class: "dir-input", value: "/bin/bash"
             end
@@ -218,6 +223,7 @@ class Portal::DirectoryPage < PortalLayout
               tr do
                 th "Username"
                 th "Display name"
+                th "Email"
                 th "UID"
                 th "Shell"
                 th "SSH Keys"
@@ -488,6 +494,7 @@ function renderCloud() {
     tr.innerHTML =
       `<td class="mono">${esc(u.username)}</td>` +
       `<td>${esc(u.gecos || "")}</td>` +
+      `<td class="dim">${esc(u.email || "")}</td>` +
       `<td class="dim">${u.uid}</td>` +
       `<td class="mono dim">${esc(u.shell || "/bin/bash")}</td>` +
       `<td><button class="btn-link btn-ssh" onclick="window.__toggleSsh('${esc(u.username)}')">${sshKeysBtnLabel(u.username)}</button></td>`;
@@ -496,7 +503,7 @@ function renderCloud() {
     sshTr.className = "ssh-key-row hidden";
     sshTr.id = "ssh-row-" + u.username;
     sshTr.innerHTML =
-      `<td colspan="5" class="ssh-key-cell">` +
+      `<td colspan="6" class="ssh-key-cell">` +
       `<textarea class="dir-textarea" id="ssh-ta-${esc(u.username)}" data-username="${esc(u.username)}" rows="3" ` +
       `placeholder="One public key per line (e.g. ssh-ed25519 AAAA...)" ` +
       `oninput="window.__saveSshKeys('${esc(u.username)}')" ` +
@@ -529,6 +536,7 @@ function renderLocal() {
     tr.innerHTML =
       `<td class="mono">${esc(u.username)}${isDup ? ' <span class="dup-tag">duplicate</span>' : ""}</td>` +
       `<td>${esc(u.gecos || "")}</td>` +
+      `<td class="dim">${esc(u.email || "")}</td>` +
       `<td class="dim">${u.uid}</td>` +
       `<td class="mono dim">${esc(u.shell || "/bin/bash")}</td>` +
       `<td><button class="btn-link btn-ssh" onclick="window.__toggleSsh('${esc(u.username)}')">${sshKeysBtnLabel(u.username)}</button></td>` +
@@ -538,7 +546,7 @@ function renderLocal() {
     sshTr.className = "ssh-key-row hidden";
     sshTr.id = "ssh-row-" + u.username;
     sshTr.innerHTML =
-      `<td colspan="6" class="ssh-key-cell">` +
+      `<td colspan="7" class="ssh-key-cell">` +
       `<textarea class="dir-textarea" id="ssh-ta-${esc(u.username)}" data-username="${esc(u.username)}" rows="3" ` +
       `placeholder="One public key per line (e.g. ssh-ed25519 AAAA...)" ` +
       `oninput="window.__saveSshKeys('${esc(u.username)}')" ` +
@@ -614,6 +622,7 @@ async function handleDecrypt() {
 async function handleAddUser() {
   const username = document.getElementById("new-username").value.trim();
   const gecos    = document.getElementById("new-gecos").value.trim();
+  const email    = document.getElementById("new-email").value.trim();
   const shell    = document.getElementById("new-shell").value.trim() || "/bin/bash";
   const keys     = document.getElementById("new-ssh-keys").value.trim();
   const warn     = document.getElementById("add-conflict-warning");
@@ -643,11 +652,13 @@ async function handleAddUser() {
     gecos: gecos || username,
     home:  "/home/" + username,
     shell,
+    email: email || null,
   });
   renderAll();
   document.getElementById("add-user-form").classList.add("hidden");
   document.getElementById("new-username").value  = "";
   document.getElementById("new-gecos").value     = "";
+  document.getElementById("new-email").value     = "";
   document.getElementById("new-shell").value     = "/bin/bash";
   document.getElementById("new-ssh-keys").value  = "";
 }
