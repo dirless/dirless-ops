@@ -691,7 +691,7 @@ async function handleSave() {
     .map(u => u.email);
   if (emailDups.length > 0) {
     const unique = [...new Set(emailDups)];
-    setStatus("save-status", `Cannot save: duplicate email${unique.length === 1 ? "" : "s"} — ${unique.join(", ")}`, "status-error");
+    setStatus("save-status", `Cannot save: duplicate email${unique.length === 1 ? "" : "s"} - ${unique.join(", ")}`, "status-error");
     return;
   }
 
