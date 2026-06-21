@@ -184,6 +184,10 @@ module Dirless
         )
       SQL
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_user_reg ON ssh_user_registrations (customer_name, username)",
+      # Dedup before adding the email uniqueness constraint: keep only the newest
+      # registration per (customer_name, email). Safe to run on every startup — a
+      # no-op once duplicates are gone.
+      "DELETE FROM ssh_user_registrations WHERE id NOT IN (SELECT MAX(id) FROM ssh_user_registrations GROUP BY customer_name, email)",
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_user_reg_email ON ssh_user_registrations (customer_name, email)",
       # SSH CA: in-flight age challenges (nonce encrypted to user, 60s expiry).
       # nonce_hash = SHA256(nonce_plaintext) — plaintext is never persisted so a
