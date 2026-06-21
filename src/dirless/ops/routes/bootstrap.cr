@@ -37,10 +37,11 @@ module Dirless
             return context.put_status(400).json({"error" => "malformed JSON"}).halt
           end
 
-          email          = parsed["email"]?.try(&.as_s).to_s.strip.downcase
-          age_public_key = parsed["age_public_key"]?.try(&.as_s).to_s.strip
-          ssh_public_key = parsed["ssh_public_key"]?.try(&.as_s).to_s.strip
-          customer_name  = parsed["customer_name"]?.try(&.as_s).to_s.strip
+          email            = parsed["email"]?.try(&.as_s).to_s.strip.downcase
+          age_public_key   = parsed["age_public_key"]?.try(&.as_s).to_s.strip
+          ssh_public_key   = parsed["ssh_public_key"]?.try(&.as_s).to_s.strip
+          customer_name    = parsed["customer_name"]?.try(&.as_s).to_s.strip
+          provided_username = parsed["username"]?.try(&.as_s).to_s.strip.downcase
 
           return context.put_status(422).json({"error" => "email required"}).halt if email.empty?
           return context.put_status(422).json({"error" => "age_public_key required"}).halt if age_public_key.empty?
@@ -78,8 +79,10 @@ module Dirless
             end
           end
 
-          # Derive the username from an existing registration or the email local-part.
-          username = if reg = SshUserRegistration.find_by(customer_name: customer.name, email: email)
+          # Prefer: explicit username from client → existing registration → email local-part.
+          username = if !provided_username.empty? && provided_username.match(/\A[a-z0-9_-]+\z/)
+                       provided_username
+                     elsif reg = SshUserRegistration.find_by(customer_name: customer.name, email: email)
                        reg.username
                      else
                        email.split("@").first.downcase.gsub(/[^a-z0-9_-]/, "_")
