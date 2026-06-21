@@ -5,18 +5,18 @@ class Portal::BootstrapConfirm < Lucky::Action
     token = params.get?(:token).to_s.strip
 
     if token.empty?
-      render Portal::BootstrapResultPage, success: false, error_message: "Invalid registration link."
+      html Portal::BootstrapResultPage, success: false, error_message: "Invalid registration link."
     else
       begin
         _customer_name, username = daemon.confirm_bootstrap(token)
-        render Portal::BootstrapResultPage, success: true, username: username
+        html Portal::BootstrapResultPage, success: true, username: username
       rescue ex : Dirless::Ops::WebUI::DaemonClient::Error
         msg = case ex.status
               when 410 then "This registration link has already been used or has expired."
               when 404 then "Registration link is invalid."
               else          "Registration failed: #{ex.message}"
               end
-        render Portal::BootstrapResultPage, success: false, error_message: msg
+        html Portal::BootstrapResultPage, success: false, error_message: msg
       end
     end
   end
