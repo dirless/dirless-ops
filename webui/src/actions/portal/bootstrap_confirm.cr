@@ -5,23 +5,18 @@ class Portal::BootstrapConfirm < Lucky::Action
     token = params.get?(:token).to_s.strip
 
     if token.empty?
-      flash.failure = "Invalid registration link."
-      redirect to: Portal::DirectoryShow
+      render Portal::BootstrapResultPage, success: false, error_message: "Invalid registration link."
     else
       begin
-        customer_name, username = daemon.confirm_bootstrap(token)
-        flash.success = "SSH certificate registration complete for #{username}. You can now run 'dirless-connect ssh login'."
-        redirect to: Portal::DirectoryShow
+        _customer_name, username = daemon.confirm_bootstrap(token)
+        render Portal::BootstrapResultPage, success: true, username: username
       rescue ex : Dirless::Ops::WebUI::DaemonClient::Error
-        case ex.status
-        when 410
-          flash.failure = "This registration link has already been used or has expired."
-        when 404
-          flash.failure = "Registration link is invalid."
-        else
-          flash.failure = "Registration failed: #{ex.message}"
-        end
-        redirect to: Portal::DirectoryShow
+        msg = case ex.status
+              when 410 then "This registration link has already been used or has expired."
+              when 404 then "Registration link is invalid."
+              else          "Registration failed: #{ex.message}"
+              end
+        render Portal::BootstrapResultPage, success: false, error_message: msg
       end
     end
   end
