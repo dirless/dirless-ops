@@ -46,6 +46,10 @@ module Dirless
           return context.put_status(422).json({"error" => "email required"}).halt if email.empty?
           return context.put_status(422).json({"error" => "age_public_key required"}).halt if age_public_key.empty?
           return context.put_status(422).json({"error" => "ssh_public_key required"}).halt if ssh_public_key.empty?
+          return context.put_status(422).json({"error" => "username required"}).halt if provided_username.empty?
+          unless provided_username.match(/\A[a-z0-9_-]+\z/)
+            return context.put_status(422).json({"error" => "username may only contain lowercase letters, digits, hyphens, and underscores"}).halt
+          end
 
           # Validate age public key format.
           unless age_public_key.starts_with?("age1")
@@ -79,21 +83,7 @@ module Dirless
             end
           end
 
-          # Prefer: explicit username from client → existing registration → email local-part.
-          username = if !provided_username.empty? && provided_username.match(/\A[a-z0-9_-]+\z/)
-                       provided_username
-                     elsif reg = SshUserRegistration.find_by(customer_name: customer.name, email: email)
-                       reg.username
-                     else
-                       email.split("@").first.downcase.gsub(/[^a-z0-9_-]/, "_")
-                     end
-
-          # Reject empty or underscore-only derived usernames.
-          if username.empty? || username.chars.all? { |c| c == '_' }
-            return context.put_status(422).json({
-              "error" => "Could not derive a valid username from '#{email}'. Contact your administrator.",
-            }).halt
-          end
+          username = provided_username
 
           token = Random::Secure.hex(32)
           record = SshBootstrapToken.new(
