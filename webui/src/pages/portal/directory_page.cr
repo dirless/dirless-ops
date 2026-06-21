@@ -639,6 +639,17 @@ async function handleAddUser() {
   }
   warn.classList.add("hidden");
 
+  if (email) {
+    const allEmails = [
+      ...cloudUsers.map(u => u.email).filter(Boolean),
+      ...localUsers.map(u => u.email).filter(Boolean),
+    ];
+    if (allEmails.includes(email.toLowerCase())) {
+      alert("That email address is already assigned to another user.");
+      return;
+    }
+  }
+
   if (keys) {
     const result = await validateSshKeys(keys);
     if (result.error) { alert("Invalid SSH key: " + result.error); return; }
