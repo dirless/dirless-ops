@@ -112,19 +112,19 @@ class Portal::DashboardPage < PortalLayout
       end
 
       # Enrollment instructions
-      div class: "section-heading" do
-        text "Enroll a node"
-      end
-
-      div class: "terminal-box" do
-        div class: "terminal-bar" do
-          span class: "dot dot-r"
-          span class: "dot dot-y"
-          span class: "dot dot-g"
-          span "Enroll a node in 30 seconds", class: "terminal-title"
+      details class: "collapsible-section" do
+        summary class: "section-heading collapsible-heading" do
+          text "Enroll a node"
         end
-        div class: "terminal-body" do
-          raw <<-HTML
+        div class: "terminal-box" do
+          div class: "terminal-bar" do
+            span class: "dot dot-r"
+            span class: "dot dot-y"
+            span class: "dot dot-g"
+            span "Enroll a node in 30 seconds", class: "terminal-title"
+          end
+          div class: "terminal-body" do
+            raw <<-HTML
 <pre><span class="c-comment"># install (RHEL / Amazon Linux 2023)</span>
 <span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://dirless.com/rpm/dirless.repo</span> \
   <span class="c-flag">-o</span> /etc/yum.repos.d/dirless.repo
@@ -136,6 +136,7 @@ class Portal::DashboardPage < PortalLayout
 <span class="c-comment"># start the agent</span>
 <span class="c-cmd">systemctl enable</span> <span class="c-flag">--now</span> <span class="c-val">dirless-agent</span></pre>
 HTML
+          end
         end
       end
 
@@ -455,6 +456,37 @@ HTML
       color: var(--text);
       margin-bottom: 0.85rem;
       margin-top: 0.5rem;
+    }
+
+    .collapsible-heading {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      user-select: none;
+    }
+
+    .collapsible-heading::-webkit-details-marker { display: none; }
+
+    .collapsible-heading::before {
+      content: "▶";
+      font-size: 0.65rem;
+      color: var(--muted);
+      transition: transform 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .collapsible-section[open] > .collapsible-heading::before {
+      transform: rotate(90deg);
+    }
+
+    .collapsible-section[open] > .collapsible-heading {
+      margin-bottom: 0.85rem;
+    }
+
+    .collapsible-section:not([open]) > .collapsible-heading {
+      margin-bottom: 0.5rem;
     }
 
     .terminal-box {
