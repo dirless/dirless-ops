@@ -645,7 +645,7 @@ async function handleAddUser() {
       ...localUsers.map(u => u.email).filter(Boolean),
     ];
     if (allEmails.includes(email.toLowerCase())) {
-      alert("That email address is already assigned to another user.");
+      alert(`That email address "${email}" is already assigned to another user.`);
       return;
     }
   }
@@ -681,6 +681,20 @@ async function handleSave() {
     setStatus("save-status", "Decrypt first.", "status-error");
     return;
   }
+  // Block save if any local user email duplicates a cloud or other local user email.
+  const allEmails = [
+    ...cloudUsers.map(u => u.email).filter(Boolean),
+    ...localUsers.map(u => u.email).filter(Boolean),
+  ];
+  const emailDups = localUsers
+    .filter(u => u.email && allEmails.filter(e => e === u.email).length > 1)
+    .map(u => u.email);
+  if (emailDups.length > 0) {
+    const unique = [...new Set(emailDups)];
+    setStatus("save-status", `Cannot save: duplicate email${unique.length === 1 ? "" : "s"} — ${unique.join(", ")}`, "status-error");
+    return;
+  }
+
   // Validate and flush any open SSH key textareas before encrypting
   for (const row of document.querySelectorAll(".ssh-key-row:not(.hidden)")) {
     const ta = row.querySelector("textarea");
