@@ -184,6 +184,7 @@ module Dirless
         )
       SQL
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_user_reg ON ssh_user_registrations (customer_name, username)",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_user_reg_email ON ssh_user_registrations (customer_name, email)",
       # SSH CA: in-flight age challenges (nonce encrypted to user, 60s expiry).
       # nonce_hash = SHA256(nonce_plaintext) — plaintext is never persisted so a
       # DB dump cannot be used to mint certificates without the user's age private key.

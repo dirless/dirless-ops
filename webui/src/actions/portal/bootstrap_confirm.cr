@@ -12,6 +12,7 @@ class Portal::BootstrapConfirm < Lucky::Action
         html Portal::BootstrapResultPage, success: true, username: username
       rescue ex : Dirless::Ops::WebUI::DaemonClient::Error
         msg = case ex.status
+              when 409 then "This email is already registered under a different username. Contact your administrator."
               when 410 then "This registration link has already been used or has expired."
               when 404 then "Registration link is invalid."
               else          "Registration failed: #{ex.message}"

@@ -188,6 +188,14 @@ module Dirless
 
           cust_name, username, email, age_pub, ssh_pub = result_tuple
 
+          # Reject if this email is already registered under a different username.
+          existing_for_email = SshUserRegistration.find_by(customer_name: cust_name, email: email)
+          if existing_for_email && existing_for_email.username != username
+            return context.put_status(409).json({
+              "error" => "This email is already registered under a different username. Contact your administrator.",
+            }).halt
+          end
+
           # Upsert the user registration outside the transaction — Granite ORM handles this.
           reg = SshUserRegistration.find_by(customer_name: cust_name, username: username) ||
                 SshUserRegistration.new(customer_name: cust_name, username: username)
