@@ -122,7 +122,7 @@ class Portal::DashboardPage < PortalLayout
           span class: "dot dot-y"
           span class: "dot dot-g"
           span "Enroll a node in 30 seconds", class: "terminal-title"
-          span " - Click to expand", class: "terminal-expand-hint"
+          span "- Click to expand", class: "terminal-expand-hint"
         end
         div class: "terminal-body" do
           raw <<-HTML
@@ -151,7 +151,7 @@ HTML
           span class: "dot dot-y"
           span class: "dot dot-g"
           span "Install dirless-syncer", class: "terminal-title"
-          span " - Click to expand", class: "terminal-expand-hint"
+          span "- Click to expand", class: "terminal-expand-hint"
         end
         div class: "terminal-body" do
           raw <<-HTML
@@ -176,7 +176,7 @@ HTML
           span class: "dot dot-y"
           span class: "dot dot-g"
           span "Configure dirless-syncer", class: "terminal-title"
-          span " - Click to expand", class: "terminal-expand-hint"
+          span "- Click to expand", class: "terminal-expand-hint"
         end
         div class: "terminal-body" do
           raw <<-HTML
