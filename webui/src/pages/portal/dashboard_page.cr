@@ -145,12 +145,13 @@ HTML
         text "Install the syncer"
       end
 
-      div class: "terminal-box" do
-        div class: "terminal-bar" do
+      details class: "terminal-box terminal-collapsible" do
+        summary class: "terminal-bar" do
           span class: "dot dot-r"
           span class: "dot dot-y"
           span class: "dot dot-g"
           span "Install dirless-syncer", class: "terminal-title"
+          span " - Click to expand", class: "terminal-expand-hint"
         end
         div class: "terminal-body" do
           raw <<-HTML
@@ -169,12 +170,13 @@ HTML
         text "Configure and start the syncer"
       end
 
-      div class: "terminal-box" do
-        div class: "terminal-bar" do
+      details class: "terminal-box terminal-collapsible" do
+        summary class: "terminal-bar" do
           span class: "dot dot-r"
           span class: "dot dot-y"
           span class: "dot dot-g"
           span "Configure dirless-syncer", class: "terminal-title"
+          span " - Click to expand", class: "terminal-expand-hint"
         end
         div class: "terminal-body" do
           raw <<-HTML
