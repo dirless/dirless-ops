@@ -122,6 +122,7 @@ class Portal::DashboardPage < PortalLayout
           span class: "dot dot-y"
           span class: "dot dot-g"
           span "Enroll a node in 30 seconds", class: "terminal-title"
+          span " - Click to expand", class: "terminal-expand-hint"
         end
         div class: "terminal-body" do
           raw <<-HTML
@@ -480,6 +481,8 @@ HTML
     .terminal-collapsible:not([open]) > summary {
       border-bottom: none;
     }
+
+    .terminal-collapsible[open] .terminal-expand-hint { display: none; }
 
     .terminal-box {
       background: var(--surface);
