@@ -78,7 +78,7 @@ class Portal::DirectoryPage < PortalLayout
     # Step 1: Private key
     div class: "dir-card" do
       div class: "dir-card-title" do
-        text "Step 1 - Enter age private key"
+        text "Enter age private key"
       end
       label "Private key", for: "private-key-input", class: "dir-label"
       if key = @age_public_key
