@@ -54,7 +54,7 @@ class Portal::SettingsPage < PortalLayout
       para class: "s-desc" do
         text "Users install "
         code "dirless-connect"
-        text " on their laptop to obtain short-lived SSH certificates — no static authorized_keys management required."
+        text " on their laptop to obtain short-lived SSH certificates - no static authorized_keys management required."
       end
       div class: "s-connect-steps" do
         div class: "s-connect-step" do

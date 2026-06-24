@@ -1,5 +1,5 @@
 name: dirless-ops
-version: 0.1.7
+version: 0.1.8
 
 description: Centralized operations daemon for Dirless
 
@@ -21,7 +21,7 @@ dependencies:
 
   trash-panda-db:
     github: dirless/trash-panda-db
-    version: "~> 0.8.7"
+    version: "~> 0.8.8"
 
   toml:
     github: crystal-community/toml.cr

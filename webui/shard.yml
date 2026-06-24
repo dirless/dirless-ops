@@ -1,5 +1,5 @@
 name: dirless-ops-webui
-version: 0.1.5
+version: 0.1.6
 
 description: Web UI for the Dirless ops daemon
 
@@ -8,16 +8,16 @@ authors:
 
 license: Apache-2.0
 
-crystal: ">= 1.9.0"
+crystal: ">= 1.16.0"
 
 dependencies:
   lucky:
     github: luckyframework/lucky
-    version: "~> 1.3.0"
+    version: "~> 1.5.0"
 
   lucky_env:
     github: luckyframework/lucky_env
-    version: "~> 0.1.3"
+    version: "~> 0.3.0"
 
 development_dependencies:
   ameba:

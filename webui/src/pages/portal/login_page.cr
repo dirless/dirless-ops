@@ -7,7 +7,7 @@ class Portal::LoginPage
     html_doctype
     html lang: "en" do
       head do
-        title "Sign in — Dirless"
+        title "Sign in - Dirless"
         meta charset: "utf-8"
         meta name: "viewport", content: "width=device-width, initial-scale=1"
         raw "<style>#{login_css}</style>"

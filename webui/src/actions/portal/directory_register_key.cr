@@ -3,7 +3,7 @@ class Portal::DirectoryRegisterKey < PortalAction
     public_key = params.get(:age_public_key).strip
     if public_key.starts_with?("age1")
       daemon.register_age_public_key(portal_customer_name, public_key)
-      flash.success = "Keypair registered. Save your private key somewhere safe — it cannot be recovered."
+      flash.success = "Keypair registered. Save your private key somewhere safe - it cannot be recovered."
     else
       flash.failure = "Invalid age public key."
     end

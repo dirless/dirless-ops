@@ -6,7 +6,7 @@ class Portal::DirectoryUpdate < PortalAction
     flash.success = "Local users saved successfully."
     redirect to: Portal::DirectoryShow
   rescue ex : Lucky::MissingParamError
-    flash.failure = "Missing blob — the form was submitted without a payload."
+    flash.failure = "Missing blob - the form was submitted without a payload."
     redirect to: Portal::DirectoryShow
   rescue ex : Dirless::Ops::WebUI::DaemonClient::Error
     flash.failure = "Failed to save: #{ex.message}"

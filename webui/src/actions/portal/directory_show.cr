@@ -1,6 +1,6 @@
 class Portal::DirectoryShow < PortalAction
   get "/directory" do
-    # Always re-check provisioned status from the API — session can be stale.
+    # Always re-check provisioned status from the API - session can be stale.
     customer = daemon.customer(portal_customer_name)
     actually_provisioned = customer.provisioned == true
     if actually_provisioned && !portal_provisioned

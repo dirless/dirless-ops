@@ -45,7 +45,7 @@ class Portal::DashboardPage < PortalLayout
 
       if cs = @customer_status
         cs.nodes.each do |node|
-          # user_count is the same on every Raft replica — only count the primary
+          # user_count is the same on every Raft replica - only count the primary
           # to avoid double (or triple) counting identical data.
           total_users += node.user_count || 0 if node.is_primary
           (node.agents || [] of Dirless::Ops::WebUI::AgentInfo).each do |agent|
@@ -87,7 +87,7 @@ class Portal::DashboardPage < PortalLayout
         end
       end
 
-      # Tenant ID — only manually-managed (non-AWS) customers need this; it's the
+      # Tenant ID - only manually-managed (non-AWS) customers need this; it's the
       # value the enroll command pins below, and what manual directory data is
       # stored under on the backend.
       if manual_tenant
@@ -142,7 +142,7 @@ HTML
         end
       end
 
-      # Syncer — install
+      # Syncer - install
       div class: "section-heading" do
         text "Install the syncer"
       end
@@ -169,7 +169,7 @@ HTML
         end
       end
 
-      # Syncer — configure
+      # Syncer - configure
       div class: "section-heading" do
         text "Configure and start the syncer"
       end
@@ -186,7 +186,7 @@ HTML
         end
         div class: "terminal-body" do
           raw <<-HTML
-<pre><span class="c-comment"># write config — the syncer self-enrolls on first start using the token below</span>
+<pre><span class="c-comment"># write config - the syncer self-enrolls on first start using the token below</span>
 <span class="c-cmd">cat</span> &gt; /etc/dirless/dirless-syncer.toml &lt;&lt; <span class="c-val">'EOF'</span>
 [backend]
 url              = "<span class="c-val">https://#{subdomain}</span>"
@@ -201,7 +201,7 @@ enrollment_token = "<span class="c-val">#{hmac_secret}</span>"
 interval_seconds = 300
 <span class="c-val">EOF</span>
 
-<span class="c-comment"># start the syncer — it enrolls itself, then begins syncing</span>
+<span class="c-comment"># start the syncer - it enrolls itself, then begins syncing</span>
 <span class="c-cmd">systemctl enable</span> <span class="c-flag">--now</span> <span class="c-val">dirless-syncer</span></pre>
 HTML
         end
@@ -256,10 +256,10 @@ HTML
                       if rt = node.response_time_ms
                         text "#{rt}ms"
                       else
-                        text "—"
+                        text "-"
                       end
                     end
-                    td(node.checked_at ? time_ago(node.checked_at.not_nil!) : "—")
+                    td(node.checked_at ? time_ago(node.checked_at.not_nil!) : "-")
                   end
                 end
               end

@@ -9,7 +9,7 @@ class Portal::BootstrapResultPage
     html_doctype
     html lang: "en" do
       head do
-        title "SSH Registration — Dirless"
+        title "SSH Registration - Dirless"
         meta charset: "utf-8"
         meta name: "viewport", content: "width=device-width, initial-scale=1"
         raw "<style>#{css}</style>"

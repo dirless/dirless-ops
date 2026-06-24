@@ -10,7 +10,7 @@ class Portal::RegisterPage
     html_doctype
     html lang: "en" do
       head do
-        title "Create account — Dirless"
+        title "Create account - Dirless"
         meta charset: "utf-8"
         meta name: "viewport", content: "width=device-width, initial-scale=1"
         raw "<style>#{register_css}</style>"
@@ -168,7 +168,7 @@ class Portal::RegisterPage
                   end
                 end
                 para class: "plan-note" do
-                  text "* Free plan — up to 10 servers, no credit card required"
+                  text "* Free plan - up to 10 servers, no credit card required"
                 end
               end
 
