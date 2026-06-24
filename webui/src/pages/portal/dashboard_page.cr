@@ -484,6 +484,8 @@ HTML
       border-bottom: none;
     }
 
+    .terminal-expand-hint { margin-left: 0.25rem; }
+
     .terminal-collapsible[open] .terminal-expand-hint { display: none; }
 
     .terminal-box {
