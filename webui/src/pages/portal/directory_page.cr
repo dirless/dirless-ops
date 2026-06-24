@@ -49,11 +49,11 @@ class Portal::DirectoryPage < PortalLayout
     div class: "banner banner-info" do
       text "Manage your Dirless directory. "
       strong "Your private key never leaves the browser"
-      text " — decryption and re-encryption happen locally. "
+      text " - decryption and re-encryption happen locally. "
       a "Don't have a key? Learn how to generate one →", href: "https://dirless.com/age-keypair.html", target: "_blank"
     end
 
-    # Keypair generator — only shown when no key is registered yet
+    # Keypair generator - only shown when no key is registered yet
     if @age_public_key.nil?
       div id: "keygen-card", class: "dir-card" do
         div class: "dir-card-title" do
@@ -78,14 +78,14 @@ class Portal::DirectoryPage < PortalLayout
     # Step 1: Private key
     div class: "dir-card" do
       div class: "dir-card-title" do
-        text "Step 1 — Enter age private key"
+        text "Step 1 - Enter age private key"
       end
       label "Private key", for: "private-key-input", class: "dir-label"
       if key = @age_public_key
         div class: "dir-key-hint" do
           text "Your syncer has already registered key "
           code key
-          text " — paste the matching private key below."
+          text " - paste the matching private key below."
         end
         div class: "dir-recover-wrap" do
           a "Lost your key?", href: "#", id: "recover-toggle", class: "dir-recover-link"
@@ -129,7 +129,7 @@ class Portal::DirectoryPage < PortalLayout
       div id: "dup-banner", class: "hidden banner banner-warning mb-0" do
         span id: "dup-banner-text" do
         end
-        text " Local entries take effect for these users — "
+        text " Local entries take effect for these users - "
         a "review below", href: "#local-section"
         text "."
       end
@@ -142,7 +142,7 @@ class Portal::DirectoryPage < PortalLayout
           end
         end
         div id: "cloud-empty", class: "hidden dir-empty" do
-          text "No IAM Identity Center snapshot yet — the syncer hasn't run."
+          text "No IAM Identity Center snapshot yet - the syncer hasn't run."
         end
         div id: "cloud-table-wrap", class: "hidden table-wrap" do
           table class: "dir-table" do
@@ -204,7 +204,7 @@ class Portal::DirectoryPage < PortalLayout
           div class: "mt-s" do
             label "SSH public keys", for: "new-ssh-keys", class: "dir-label"
             textarea id: "new-ssh-keys", class: "dir-textarea", rows: "2",
-              placeholder: "One key per line (optional — can be added later)" do
+              placeholder: "One key per line (optional - can be added later)" do
             end
           end
           div class: "dir-row mt-s" do
@@ -385,7 +385,7 @@ async function validateSshKeys(text) {
     if (wireType !== parts[0]) {
       return { error: `Line ${i + 1}: key type "${parts[0]}" does not match key data (says "${wireType}")` };
     }
-    // Compute SHA-256 fingerprint of the raw key blob — same as ssh-keygen -l -E sha256.
+    // Compute SHA-256 fingerprint of the raw key blob - same as ssh-keygen -l -E sha256.
     try {
       const hashBuf = await crypto.subtle.digest("SHA-256", decoded);
       const b64 = btoa(String.fromCharCode(...new Uint8Array(hashBuf))).replace(/=+$/, "");

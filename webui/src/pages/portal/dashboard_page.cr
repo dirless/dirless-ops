@@ -121,8 +121,10 @@ class Portal::DashboardPage < PortalLayout
           span class: "dot dot-r"
           span class: "dot dot-y"
           span class: "dot dot-g"
-          span "Enroll a node in 30 seconds", class: "terminal-title"
-          span "- Click to expand", class: "terminal-expand-hint"
+          span class: "terminal-title" do
+            text "Enroll a node in 30 seconds"
+            span " - Click to expand", class: "terminal-expand-hint"
+          end
         end
         div class: "terminal-body" do
           raw <<-HTML
@@ -150,8 +152,10 @@ HTML
           span class: "dot dot-r"
           span class: "dot dot-y"
           span class: "dot dot-g"
-          span "Install dirless-syncer", class: "terminal-title"
-          span "- Click to expand", class: "terminal-expand-hint"
+          span class: "terminal-title" do
+            text "Install dirless-syncer"
+            span " - Click to expand", class: "terminal-expand-hint"
+          end
         end
         div class: "terminal-body" do
           raw <<-HTML
@@ -175,8 +179,10 @@ HTML
           span class: "dot dot-r"
           span class: "dot dot-y"
           span class: "dot dot-g"
-          span "Configure dirless-syncer", class: "terminal-title"
-          span "- Click to expand", class: "terminal-expand-hint"
+          span class: "terminal-title" do
+            text "Configure dirless-syncer"
+            span " - Click to expand", class: "terminal-expand-hint"
+          end
         end
         div class: "terminal-body" do
           raw <<-HTML
@@ -483,8 +489,6 @@ HTML
     .terminal-collapsible:not([open]) > summary {
       border-bottom: none;
     }
-
-    .terminal-expand-hint { margin-left: 0.25rem; }
 
     .terminal-collapsible[open] .terminal-expand-hint { display: none; }
 
