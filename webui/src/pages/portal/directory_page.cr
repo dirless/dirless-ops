@@ -240,9 +240,51 @@ class Portal::DirectoryPage < PortalLayout
         end
       end
 
+      # Local groups (editable)
+      div id: "groups-section", class: "dir-card" do
+        div class: "dir-row mb-s" do
+          div class: "dir-card-title mb-0" do
+            text "Local groups"
+            span id: "groups-count-badge", class: "dir-badge" do
+            end
+          end
+          button id: "add-group-btn", type: "button", class: "btn btn-success" do
+            text "+ Add group"
+          end
+        end
+        para class: "dir-groups-desc" do
+          text "Create groups and assign local users to them. Group names are used in Settings "
+          a "host access rules", href: "/settings"
+          text " to control which users can log into which hosts."
+        end
+
+        div id: "add-group-form", class: "hidden dir-add-form mb-s" do
+          div class: "dir-add-title" do
+            text "New group"
+          end
+          div class: "dir-row" do
+            input type: "text", id: "new-group-name", class: "dir-input", placeholder: "admins"
+            button id: "confirm-add-group-btn", type: "button", class: "btn btn-primary btn-sm" do
+              text "Add"
+            end
+            button id: "cancel-add-group-btn", type: "button", class: "btn btn-ghost btn-sm" do
+              text "Cancel"
+            end
+          end
+          div id: "add-group-error", class: "hidden dir-field-error" do
+          end
+        end
+
+        div id: "groups-list" do
+        end
+        div id: "groups-empty", class: "dir-empty" do
+          text "No custom groups yet. Click \"+ Add group\" to create one."
+        end
+      end
+
       div class: "dir-row" do
         button id: "save-btn", type: "button", class: "btn btn-primary" do
-          text "Encrypt & save local users"
+          text "Encrypt & save"
         end
         span id: "save-status", class: "dir-status" do
         end
@@ -266,10 +308,11 @@ class Portal::DirectoryPage < PortalLayout
       raw <<-'JAVASCRIPT'
 import * as age from "https://esm.sh/age-encryption@0";
 
-let cloudUsers = [];
-let localUsers = [];
-let sshKeys    = {};   // username → newline-separated public keys string
-let identity   = null;
+let cloudUsers  = [];
+let localUsers  = [];
+let localGroups = [];  // [{name, gid, members: [username,...]}] — custom groups only
+let sshKeys     = {};  // username → newline-separated public keys string
+let identity    = null;
 
 // ── binary / base64 ─────────────────────────────────────────────────────────
 
@@ -335,14 +378,19 @@ function setStatus(id, msg, cls) {
 }
 
 async function decryptBlob(b64, key) {
-  if (!b64) return { users: [], sshKeys: {} };
+  if (!b64) return { users: [], groups: [], sshKeys: {} };
   const d = new age.Decrypter();
   d.addIdentity(key);
   const gzipped   = await d.decrypt(b64ToBytes(b64), "uint8array");
   const jsonBytes = await gunzip(gzipped);
   const payload   = JSON.parse(new TextDecoder().decode(jsonBytes));
+  // Filter out the auto-managed dirless-local group — we rebuild it on every save.
+  const groups = Array.isArray(payload.groups)
+    ? payload.groups.filter(g => g.name !== LOCAL_GROUP_NAME)
+    : [];
   return {
     users:   Array.isArray(payload.users) ? payload.users : [],
+    groups,
     sshKeys: (payload.ssh_keys && typeof payload.ssh_keys === "object") ? payload.ssh_keys : {},
   };
 }
@@ -559,6 +607,7 @@ function renderLocal() {
 function renderAll() {
   renderCloud();
   renderLocal();
+  renderGroups();
   updateDuplicateBanner();
 }
 
@@ -571,6 +620,102 @@ window.__delUser = function(i) {
 function nextUid() {
   const localMax = localUsers.length === 0 ? 0 : Math.max(...localUsers.map(u => u.uid));
   return Math.max(LOCAL_UID_FLOOR + 1, localMax + 1);
+}
+
+function nextGid() {
+  const base = LOCAL_GROUP_GID + 1;  // custom groups start at 100001
+  const usedGids = localGroups.map(g => g.gid);
+  let gid = base;
+  while (usedGids.includes(gid)) gid++;
+  return gid;
+}
+
+function renderGroups() {
+  const list  = document.getElementById("groups-list");
+  const empty = document.getElementById("groups-empty");
+  const badge = document.getElementById("groups-count-badge");
+  badge.textContent = localGroups.length > 0 ? ` (${localGroups.length})` : "";
+
+  if (localGroups.length === 0) {
+    list.innerHTML = "";
+    empty.classList.remove("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
+
+  const localUsernames = localUsers.map(u => u.username);
+  list.innerHTML = localGroups.map((g, gi) => {
+    const memberTags = g.members.map(m =>
+      `<span class="grp-member-tag">${esc(m)}<button class="grp-member-remove" onclick="window.__removeFromGroup(${gi},'${esc(m)}')" title="Remove">x</button></span>`
+    ).join("");
+    const available = localUsernames.filter(u => !g.members.includes(u));
+    const addSelect = available.length > 0
+      ? `<select class="grp-add-select" onchange="window.__addToGroup(${gi}, this)">
+           <option value="">+ add member</option>
+           ${available.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join("")}
+         </select>`
+      : "";
+    return `
+      <div class="grp-card">
+        <div class="grp-header">
+          <span class="grp-name">${esc(g.name)}</span>
+          <span class="grp-gid">GID ${g.gid}</span>
+          <button class="btn-link btn-danger grp-delete-btn" onclick="window.__deleteGroup(${gi})">Delete group</button>
+        </div>
+        <div class="grp-members">
+          ${memberTags}
+          ${addSelect}
+          ${g.members.length === 0 && available.length === 0 ? '<span class="grp-no-users">No local users exist yet.</span>' : ""}
+        </div>
+      </div>`;
+  }).join("");
+}
+
+window.__addToGroup = function(gi, select) {
+  const username = select.value;
+  if (!username) return;
+  if (!localGroups[gi].members.includes(username)) {
+    localGroups[gi].members.push(username);
+    renderGroups();
+  }
+};
+
+window.__removeFromGroup = function(gi, username) {
+  localGroups[gi].members = localGroups[gi].members.filter(m => m !== username);
+  renderGroups();
+};
+
+window.__deleteGroup = function(gi) {
+  if (!confirm(`Delete group "${localGroups[gi].name}"?`)) return;
+  localGroups.splice(gi, 1);
+  renderGroups();
+};
+
+function handleAddGroup() {
+  const input = document.getElementById("new-group-name");
+  const errEl = document.getElementById("add-group-error");
+  const name  = input.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+  errEl.classList.add("hidden");
+
+  if (!name) {
+    errEl.textContent = "Group name is required.";
+    errEl.classList.remove("hidden");
+    return;
+  }
+  if (name === LOCAL_GROUP_NAME) {
+    errEl.textContent = `"${LOCAL_GROUP_NAME}" is reserved.`;
+    errEl.classList.remove("hidden");
+    return;
+  }
+  if (localGroups.some(g => g.name === name)) {
+    errEl.textContent = `Group "${name}" already exists.`;
+    errEl.classList.remove("hidden");
+    return;
+  }
+  localGroups.push({ name, gid: nextGid(), members: [] });
+  input.value = "";
+  document.getElementById("add-group-form").classList.add("hidden");
+  renderGroups();
 }
 
 // ── decrypt ───────────────────────────────────────────────────────────────────
@@ -602,8 +747,9 @@ async function handleDecrypt() {
       decryptBlob(CLOUD_SNAPSHOT_B64, identity),
       decryptBlob(LOCAL_SNAPSHOT_B64, identity),
     ]);
-    cloudUsers = cloudResult.users;
-    localUsers = localResult.users;
+    cloudUsers  = cloudResult.users;
+    localUsers  = localResult.users;
+    localGroups = localResult.groups;
     // Merge ssh_keys; local snapshot wins on conflict
     sshKeys = Object.assign({}, cloudResult.sshKeys, localResult.sshKeys);
     renderAll();
@@ -714,11 +860,20 @@ async function handleSave() {
     "Encrypting " + localUsers.length + " local user" + (localUsers.length === 1 ? "" : "s") + "…",
     "status-muted");
   try {
+    // dirless-local always contains every local user (backward compat + catch-all).
+    // Custom groups are saved alongside it with only their explicitly assigned members.
+    const autoGroup = localUsers.length > 0
+      ? [{ name: LOCAL_GROUP_NAME, gid: LOCAL_GROUP_GID, members: localUsers.map(u => u.username) }]
+      : [];
+    // Drop members who no longer exist as local users.
+    const validUsernames = new Set(localUsers.map(u => u.username));
+    const cleanedGroups  = localGroups.map(g => ({
+      ...g,
+      members: g.members.filter(m => validUsernames.has(m)),
+    }));
     const payload = {
       users:    localUsers,
-      groups:   localUsers.length === 0 ? [] : [
-        { name: LOCAL_GROUP_NAME, gid: LOCAL_GROUP_GID, members: localUsers.map(u => u.username) },
-      ],
+      groups:   [...autoGroup, ...cleanedGroups],
       ssh_keys: sshKeys,
     };
     const jsonBytes = new TextEncoder().encode(JSON.stringify(payload));
@@ -817,6 +972,19 @@ document.getElementById("cancel-add-btn").addEventListener("click", () => {
 });
 document.getElementById("new-username").addEventListener("keydown", e => {
   if (e.key === "Enter") handleAddUser();
+});
+document.getElementById("add-group-btn").addEventListener("click", () => {
+  document.getElementById("add-group-form").classList.toggle("hidden");
+  document.getElementById("add-group-error").classList.add("hidden");
+  document.getElementById("new-group-name").focus();
+});
+document.getElementById("confirm-add-group-btn").addEventListener("click", handleAddGroup);
+document.getElementById("cancel-add-group-btn").addEventListener("click", () => {
+  document.getElementById("add-group-form").classList.add("hidden");
+  document.getElementById("add-group-error").classList.add("hidden");
+});
+document.getElementById("new-group-name").addEventListener("keydown", e => {
+  if (e.key === "Enter") handleAddGroup();
 });
 JAVASCRIPT
       raw %q(
@@ -1063,6 +1231,64 @@ renderAll = function() {
     .ssh-key-cell { background: var(--surface2); padding: 0.25rem 0.75rem 0.75rem !important; }
     .ssh-key-error { color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem; }
     .ssh-key-ok { color: var(--success, #2a9d5c); font-size: 0.75rem; margin-top: 0.25rem; font-family: monospace; white-space: pre; }
+    .dir-groups-desc { font-size: 0.85rem; color: var(--text-dim); margin: 0 0 1rem; line-height: 1.5; }
+    .dir-field-error { color: var(--danger); font-size: 0.8rem; margin-top: 0.35rem; }
+    .grp-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .grp-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+    .grp-name {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .grp-gid { font-size: 0.75rem; color: var(--muted); }
+    .grp-delete-btn { margin-left: auto; font-size: 0.78rem; }
+    .grp-members { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+    .grp-member-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: rgba(88, 166, 255, 0.12);
+      border: 1px solid rgba(88, 166, 255, 0.25);
+      border-radius: 4px;
+      padding: 0.15rem 0.4rem;
+      font-size: 0.8rem;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      color: var(--text-dim);
+    }
+    .grp-member-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.7rem;
+      padding: 0;
+      font-family: inherit;
+      line-height: 1;
+    }
+    .grp-member-remove:hover { color: var(--danger); }
+    .grp-add-select {
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.8rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .grp-no-users { font-size: 0.8rem; color: var(--muted); font-style: italic; }
     CSS
   end
 end
