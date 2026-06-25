@@ -1,5 +1,6 @@
 class Portal::SettingsPage < PortalLayout
   needs cert_ttl_seconds : Int64? = nil
+  needs authz_config : Dirless::Ops::WebUI::AuthzConfigResponse? = nil
 
   def page_title : String
     "Settings"
@@ -77,6 +78,97 @@ class Portal::SettingsPage < PortalLayout
           strong "4. Connect"
           raw "<pre class=\"s-code\">ssh username@hostname</pre>"
           para "The certificate is picked up automatically by ssh. No key management needed."
+        end
+      end
+    end
+
+    if cfg = @authz_config
+      enforce = cfg.enforce_group_memberships
+      rules = cfg.host_group_rules
+
+      div class: "s-card" do
+        div class: "s-card-title" do
+          text "Login Authorization"
+        end
+        para class: "s-desc" do
+          text "When enforcement is on, only users in an authorized group will exist on each host. "
+          text "Users not in any authorized group for that host will not resolve via NSS - "
+          text "blocking all login methods (SSH, console, SFTP, tunnels). "
+          strong "Note: files owned by unauthorized users will show raw UIDs on restricted hosts."
+        end
+        form action: "/settings/authz-toggle", method: "post", class: "s-row" do
+          input type: "hidden", name: "enforce", value: enforce ? "false" : "true"
+          if enforce
+            button "Disable enforcement", type: "submit", class: "btn btn-secondary"
+            span " - enforcement is currently ", class: "s-status-label"
+            strong "ON", class: "s-status-on"
+          else
+            button "Enable enforcement", type: "submit", class: "btn btn-primary"
+            span " - enforcement is currently ", class: "s-status-label"
+            strong "OFF", class: "s-status-off"
+          end
+        end
+      end
+
+      div class: "s-card" do
+        div class: "s-card-title" do
+          text "Host Access Rules"
+        end
+        para class: "s-desc" do
+          text "Each rule grants all members of a group login access to a specific host (matched by hostname). "
+          text "A host with no matching rules will allow no users when enforcement is on."
+        end
+
+        if rules.empty?
+          para class: "s-no-rules" do
+            text "No rules configured."
+          end
+        else
+          tag "table", class: "s-rules-table" do
+            tag "thead" do
+              tag "tr" do
+                tag "th" do
+                  text "Group"
+                end
+                tag "th" do
+                  text "Hostname"
+                end
+                tag "th" do
+                end
+              end
+            end
+            tag "tbody" do
+              rules.each_with_index do |rule, i|
+                tag "tr" do
+                  tag "td", class: "s-rule-cell" do
+                    code rule.group
+                  end
+                  tag "td", class: "s-rule-cell" do
+                    code rule.host
+                  end
+                  tag "td", class: "s-rule-actions" do
+                    form action: "/settings/authz-rule-remove", method: "post" do
+                      input type: "hidden", name: "rule_index", value: i.to_s
+                      button "Remove", type: "submit", class: "btn btn-danger-sm"
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+
+        tag "hr", class: "s-divider"
+
+        para class: "s-desc" do
+          strong "Add rule"
+        end
+        form action: "/settings/authz-rule-add", method: "post", class: "s-add-rule-form" do
+          input type: "text", name: "group", placeholder: "Group name",
+            class: "s-rule-input", required: "required"
+          input type: "text", name: "host", placeholder: "Hostname (e.g. web-01)",
+            class: "s-rule-input", required: "required"
+          button "Add", type: "submit", class: "btn btn-primary"
         end
       end
     end
@@ -163,6 +255,58 @@ class Portal::SettingsPage < PortalLayout
     }
     .btn:hover { opacity: 0.85; }
     .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-danger-sm {
+      padding: 0.2rem 0.6rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      font-family: inherit;
+      transition: background 0.1s, color 0.1s;
+    }
+    .btn-danger-sm:hover { background: #b00020; color: #fff; border-color: #b00020; }
+    .s-status-label { font-size: 0.875rem; color: var(--text-dim); margin-left: 0.5rem; }
+    .s-status-on  { color: var(--accent); font-size: 0.875rem; }
+    .s-status-off { color: var(--text-dim); font-size: 0.875rem; }
+    .s-no-rules { font-size: 0.875rem; color: var(--text-dim); margin: 0.25rem 0 1rem; }
+    .s-rules-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+    .s-rules-table th {
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      padding: 0 0 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .s-rule-cell { padding: 0.45rem 0.75rem 0.45rem 0; color: var(--text); }
+    .s-rule-actions { padding: 0.3rem 0; }
+    .s-divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+    .s-add-rule-form { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .s-rule-input {
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 0.875rem;
+      font-family: inherit;
+      width: 14rem;
+    }
     CSS
   end
 end

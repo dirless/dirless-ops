@@ -104,6 +104,20 @@ module Dirless
 
         property url : String
       end
+
+      struct HostGroupRuleResponse
+        include JSON::Serializable
+
+        property group : String
+        property host : String
+      end
+
+      struct AuthzConfigResponse
+        include JSON::Serializable
+
+        property enforce_group_memberships : Bool
+        property host_group_rules : Array(HostGroupRuleResponse)
+      end
     end
   end
 end

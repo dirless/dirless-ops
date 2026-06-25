@@ -121,6 +121,8 @@ module Dirless
             get "/:name/directory/snapshot/local", Controllers::GetLocalSnapshot
             post "/:name/directory/snapshot/local", Controllers::PushLocalSnapshot
             delete "/:name/directory/snapshot/local", Controllers::DeleteLocalSnapshot
+            get "/:name/directory/authz-config", Controllers::GetAuthzConfig
+            put "/:name/directory/authz-config", Controllers::PutAuthzConfig
           end
 
           scope "/nodes" do

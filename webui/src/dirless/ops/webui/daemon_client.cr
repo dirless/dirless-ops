@@ -165,6 +165,34 @@ module Dirless
           post("/v1/customers/#{customer_name}/directory/snapshot/local", payload)
         end
 
+        # Returns the host authorization config for a customer, or a safe default
+        # (enforcement off, no rules) if the backend cannot be reached.
+        def fetch_authz_config(customer_name : String) : AuthzConfigResponse
+          response = HTTP::Client.get(
+            "#{@url}/v1/customers/#{customer_name}/directory/authz-config",
+            headers: auth_headers,
+          )
+          return authz_config_default unless response.success?
+          AuthzConfigResponse.from_json(response.body)
+        rescue
+          authz_config_default
+        end
+
+        # Saves the host authorization config for a customer.
+        def update_authz_config(customer_name : String, enforce : Bool,
+                                rules : Array(HostGroupRuleResponse)) : Nil
+          payload = {
+            "enforce_group_memberships" => enforce,
+            "host_group_rules"          => rules.map { |r| {"group" => r.group, "host" => r.host} },
+          }
+          response = HTTP::Client.put(
+            "#{@url}/v1/customers/#{customer_name}/directory/authz-config",
+            headers: json_headers,
+            body: payload.to_json,
+          )
+          check!(response)
+        end
+
         # Updates the cert TTL for a customer. Unit: seconds.
         # min: 3600 (1 hour), max: 2_592_000 (30 days).
         def update_cert_ttl(customer_name : String, cert_ttl_seconds : Int64) : Nil
@@ -174,6 +202,10 @@ module Dirless
             body: {"customer_name" => customer_name, "cert_ttl_seconds" => cert_ttl_seconds}.to_json,
           )
           check!(response)
+        end
+
+        private def authz_config_default : AuthzConfigResponse
+          AuthzConfigResponse.from_json(%({"enforce_group_memberships":false,"host_group_rules":[]}))
         end
 
         private def fetch_blob(path : String) : String?

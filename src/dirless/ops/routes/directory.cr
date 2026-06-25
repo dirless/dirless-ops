@@ -39,6 +39,26 @@ module Dirless
 
       # Shared HTTP helpers for proxying blob requests to the customer's backend.
       module DirectoryHTTP
+        private def backend_json_put(ip : String, hostname : String, path : String,
+                                     hmac_secret : String, tenant_id : String,
+                                     body : String) : {Int32, String}
+          tls = OpenSSL::SSL::Context::Client.new
+          client = Dirless::Net::TargetedClient.new(ip, hostname, 443, tls)
+          client.connect_timeout = 10.seconds
+          client.read_timeout = 30.seconds
+          headers = HTTP::Headers{
+            "Authorization" => "Bearer #{hmac_secret}",
+            "X-Tenant-ID"   => tenant_id,
+            "Content-Type"  => "application/json",
+          }
+          begin
+            response = client.put(path, headers: headers, body: body)
+            {response.status_code, response.body}
+          ensure
+            client.close rescue nil
+          end
+        end
+
         private def backend_get(ip : String, hostname : String,
                                 path : String, hmac_secret : String,
                                 tenant_id : String) : {Int32, String}
@@ -326,6 +346,75 @@ module Dirless
 
         def post(context : Context) : Context
           proxy_blob_put(context, "/v1/snapshot/local")
+        end
+      end
+
+      # GET /v1/customers/:name/directory/authz-config
+      # Proxies to the customer's backend to fetch host authorization config.
+      class GetAuthzConfig
+        include Grip::Controllers::HTTP
+        include DirectoryHelper
+        include DirectoryHTTP
+
+        def get(context : Context) : Context
+          name = context.fetch_path_params["name"]
+          result = resolve_context(context, name)
+          return context unless result
+
+          customer, tenant_id, primary_node = result
+          hostname = "#{customer.name}.#{Ops.config.backend_domain}"
+
+          begin
+            status_code, body = backend_get(primary_node.ip, hostname,
+              "/v1/snapshot/authz-config", customer.hmac_secret, tenant_id)
+            if status_code == 200
+              context.put_status(200).json(JSON.parse(body)).halt
+            else
+              context.put_status(502).json({"error" => "backend returned HTTP #{status_code}"}).halt
+            end
+          rescue ex
+            context.put_status(502).json({"error" => "backend unreachable: #{ex.message}"}).halt
+          end
+        end
+      end
+
+      # PUT /v1/customers/:name/directory/authz-config
+      # Proxies to the customer's backend to update host authorization config.
+      # Body: {"enforce_group_memberships": bool, "host_group_rules": [{"group": str, "host": str}]}
+      class PutAuthzConfig
+        include Grip::Controllers::HTTP
+        include DirectoryHelper
+        include DirectoryHTTP
+
+        def put(context : Context) : Context
+          name = context.fetch_path_params["name"]
+          result = resolve_context(context, name)
+          return context unless result
+
+          customer, tenant_id, primary_node = result
+          hostname = "#{customer.name}.#{Ops.config.backend_domain}"
+
+          body = context.request.body.try(&.gets_to_end) || ""
+          begin
+            JSON.parse(body)
+          rescue ex : JSON::ParseException
+            return context.put_status(400).json({"error" => "malformed JSON: #{ex.message}"}).halt
+          end
+
+          begin
+            status_code, response_body = backend_json_put(
+              primary_node.ip, hostname,
+              "/v1/snapshot/authz-config",
+              customer.hmac_secret, tenant_id, body,
+            )
+            if status_code == 200
+              context.put_status(200).json({"status" => "ok"}).halt
+            else
+              context.put_status(502).json({"error" => "backend returned HTTP #{status_code}: #{response_body}"}).halt
+            end
+          rescue ex
+            context.put_status(502).json({"error" => "backend unreachable: #{ex.message}"}).halt
+          end
         end
       end
     end
