@@ -75,7 +75,7 @@ class Portal::DirectoryPage < PortalLayout
       label "Private key", for: "private-key-input", class: "dir-label"
       if key = @age_public_key
         div class: "dir-key-hint" do
-          text "Your syncer has already registered key "
+          text "Registered key: "
           code key
           text " - paste the matching private key below."
         end
