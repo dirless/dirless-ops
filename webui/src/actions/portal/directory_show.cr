@@ -12,13 +12,14 @@ class Portal::DirectoryShow < PortalAction
       begin
         cloud_blob = daemon.fetch_cloud_snapshot(name)
         local_blob = daemon.fetch_local_snapshot(name)
-        age_public_key = daemon.fetch_age_public_key(name)
+        age_public_key, age_public_key_source = daemon.fetch_age_public_key(name)
         html Portal::DirectoryPage,
           email: portal_email,
           company: portal_company,
           cloud_snapshot_blob: cloud_blob,
           local_snapshot_blob: local_blob,
-          age_public_key: age_public_key
+          age_public_key: age_public_key,
+          age_public_key_source: age_public_key_source
       rescue ex : Dirless::Ops::WebUI::DaemonClient::Error
         recently_created = customer.created_at.try { |s| Time.parse_rfc3339(s) > 20.minutes.ago } || false
         html Portal::DirectoryPage,

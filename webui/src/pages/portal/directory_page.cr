@@ -2,6 +2,7 @@ class Portal::DirectoryPage < PortalLayout
   needs cloud_snapshot_blob : String?
   needs local_snapshot_blob : String?
   needs age_public_key : String? = nil
+  needs age_public_key_source : String? = nil
   needs backend_error : String? = nil
   needs provisioned : Bool = true
   needs recently_created : Bool = false
@@ -75,9 +76,14 @@ class Portal::DirectoryPage < PortalLayout
       label "Private key", for: "private-key-input", class: "dir-label"
       if key = @age_public_key
         div class: "dir-key-hint" do
-          text "Registered key: "
+          source_label = case @age_public_key_source
+                         when "enrollment" then "dirless-cli enroll"
+                         when "syncer"     then "the syncer"
+                         else                   "an unknown source"
+                         end
+          text "Originally registered via #{source_label}: "
           code key
-          text " - paste the matching private key below."
+          text " — paste the matching private key below."
         end
         div class: "dir-recover-wrap" do
           a "Lost your key?", href: "#", id: "recover-toggle", class: "dir-recover-link"

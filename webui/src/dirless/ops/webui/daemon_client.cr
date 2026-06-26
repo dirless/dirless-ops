@@ -125,15 +125,18 @@ module Dirless
           check!(response)
         end
 
-        # Returns the age public key registered by the syncer for this customer,
-        # or nil if the syncer has never run.
-        def fetch_age_public_key(customer_name : String) : String?
+        # Returns {public_key, source} for this customer's registered age key.
+        # source is "enrollment", "syncer", or nil for legacy keys set before tracking.
+        def fetch_age_public_key(customer_name : String) : {String?, String?}
           response = HTTP::Client.get(
             "#{@url}/v1/customers/#{customer_name}/directory/public-key",
             headers: auth_headers,
           )
-          return nil unless response.success?
-          JSON.parse(response.body)["age_public_key"]?.try(&.as_s?)
+          return {nil, nil} unless response.success?
+          parsed = JSON.parse(response.body)
+          key    = parsed["age_public_key"]?.try(&.as_s?)
+          source = parsed["age_public_key_source"]?.try(&.as_s?)
+          {key, source}
         end
 
         # Returns the base64-encoded cloud-sourced (aws-identity-center) snapshot blob,
