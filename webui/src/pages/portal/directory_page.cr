@@ -53,24 +53,16 @@ class Portal::DirectoryPage < PortalLayout
       a "Don't have a key? Learn how to generate one →", href: "https://dirless.com/age-keypair.html", target: "_blank"
     end
 
-    # Keypair generator - only shown when no key is registered yet
+    # Prompt to provide a key when none is registered yet
     if @age_public_key.nil?
       div id: "keygen-card", class: "dir-card" do
         div class: "dir-card-title" do
-          text "No keypair registered yet"
+          text "No key registered yet"
         end
         para class: "dir-keygen-desc" do
-          text "Generate an age keypair in your browser. The private key will be downloaded to your computer and never sent to our servers. Keep it safe. It cannot be recovered if lost."
-        end
-        div class: "dir-row" do
-          button id: "keygen-btn", type: "button", class: "btn btn-success" do
-            text "Generate keypair"
-          end
-          span id: "keygen-status", class: "dir-status" do
-          end
-        end
-        form id: "keygen-form", action: "/directory/register-key", method: "post", class: "hidden" do
-          input type: "hidden", name: "age_public_key", id: "keygen-pubkey-input"
+          text "Paste the age private key you used when enrolling this host with "
+          code "dirless-cli enroll --age-key"
+          text " below. It will be used to register the public key and decrypt your directory."
         end
       end
     end
@@ -91,21 +83,9 @@ class Portal::DirectoryPage < PortalLayout
           a "Lost your key?", href: "#", id: "recover-toggle", class: "dir-recover-link"
           div id: "recover-section", class: "hidden dir-recover-box" do
             para class: "dir-recover-warning" do
-              strong "Warning: "
-              text "This will permanently delete all local users. The syncer will need to be " \
-                   "re-enrolled on your EC2 instance with "
-              code "dirless-cli enroll --overwrite-existing"
-              text " after the reset."
-            end
-            div class: "dir-row" do
-              button id: "recover-btn", type: "button", class: "btn btn-danger-outline" do
-                text "Generate new keypair & reset"
-              end
-              span id: "recover-status", class: "dir-status" do
-              end
-            end
-            form id: "recover-form", action: "/directory/recover-key", method: "post", class: "hidden" do
-              input type: "hidden", name: "age_public_key", id: "recover-pubkey-input"
+              text "Generate a new age keypair, then re-enroll your host with "
+              code "dirless-cli enroll --age-key /path/to/new.key --overwrite-existing"
+              text ". Come back and paste the new key above."
             end
           end
         end
@@ -890,38 +870,6 @@ async function handleSave() {
   }
 }
 
-// ── keypair generation ────────────────────────────────────────────────────────
-
-const keygenBtn = document.getElementById("keygen-btn");
-if (keygenBtn) {
-  keygenBtn.addEventListener("click", async () => {
-    setStatus("keygen-status", "Generating…", "status-muted");
-    try {
-      const secretKey = await age.generateIdentity();
-      const publicKey = await age.identityToRecipient(secretKey);
-
-      // Download the private key as a file
-      const blob = new Blob([secretKey + "\n"], { type: "text/plain" });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = url;
-      a.download = "dirless-age.key";
-      a.click();
-      URL.revokeObjectURL(url);
-
-      // Pre-fill the private key textarea so they can use it immediately
-      const ta = document.getElementById("private-key-input");
-      if (ta) ta.value = secretKey;
-
-      // Submit the public key for registration
-      document.getElementById("keygen-pubkey-input").value = publicKey;
-      document.getElementById("keygen-form").submit();
-    } catch (err) {
-      setStatus("keygen-status", "Error: " + err.message, "status-error");
-    }
-  });
-}
-
 // ── key recovery ──────────────────────────────────────────────────────────────
 
 const recoverToggle = document.getElementById("recover-toggle");
@@ -929,31 +877,6 @@ if (recoverToggle) {
   recoverToggle.addEventListener("click", e => {
     e.preventDefault();
     document.getElementById("recover-section").classList.toggle("hidden");
-  });
-}
-
-const recoverBtn = document.getElementById("recover-btn");
-if (recoverBtn) {
-  recoverBtn.addEventListener("click", async () => {
-    if (!confirm("This will permanently delete all local users and reset your key. Are you sure?")) return;
-    setStatus("recover-status", "Generating…", "status-muted");
-    try {
-      const secretKey = await age.generateIdentity();
-      const publicKey = await age.identityToRecipient(secretKey);
-
-      const blob = new Blob([secretKey + "\n"], { type: "text/plain" });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = url;
-      a.download = "dirless-age.key";
-      a.click();
-      URL.revokeObjectURL(url);
-
-      document.getElementById("recover-pubkey-input").value = publicKey;
-      document.getElementById("recover-form").submit();
-    } catch (err) {
-      setStatus("recover-status", "Error: " + err.message, "status-error");
-    }
   });
 }
 
