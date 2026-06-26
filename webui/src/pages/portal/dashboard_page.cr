@@ -190,7 +190,10 @@ HTML
         end
         div class: "terminal-body" do
           raw <<-HTML
-<pre><span class="c-comment"># write config - the syncer self-enrolls on first start using the token below</span>
+<pre><span class="c-comment"># 1. Place your age private key (same key used for host enrollment)</span>
+<span class="c-cmd">install</span> <span class="c-flag">-m 600</span> <span class="c-val">/path/to/dirless-age.key /etc/dirless/age.key</span>
+
+<span class="c-comment"># 2. Write config</span>
 <span class="c-cmd">cat</span> &gt; /etc/dirless/dirless-syncer.toml &lt;&lt; <span class="c-val">'EOF'</span>
 [backend]
 url              = "<span class="c-val">https://#{subdomain}</span>"
@@ -205,7 +208,7 @@ enrollment_token = "<span class="c-val">#{hmac_secret}</span>"
 interval_seconds = 300
 <span class="c-val">EOF</span>
 
-<span class="c-comment"># start the syncer - it enrolls itself, then begins syncing</span>
+<span class="c-comment"># 3. Start the syncer - it enrolls on first start, then begins syncing</span>
 <span class="c-cmd">systemctl enable</span> <span class="c-flag">--now</span> <span class="c-val">dirless-syncer</span></pre>
 HTML
         end
