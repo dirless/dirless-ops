@@ -104,8 +104,9 @@ class Portal::DashboardPage < PortalLayout
       # Build the enroll command, pinning --tenant-id for non-AWS customers.
       enroll_command = String.build do |io|
         io << %(<span class="c-cmd">dirless-cli enroll</span> \\\n)
-        io << %(  <span class="c-flag">--server</span> <span class="c-val">https://#{subdomain}</span> \\\n)
-        io << %(  <span class="c-flag">--token</span>  <span class="c-val">#{hmac_secret}</span>)
+        io << %(  <span class="c-flag">--age-key</span>  <span class="c-val">/path/to/dirless-age.key</span> \\\n)
+        io << %(  <span class="c-flag">--server</span>   <span class="c-val">https://#{subdomain}</span> \\\n)
+        io << %(  <span class="c-flag">--token</span>    <span class="c-val">#{hmac_secret}</span>)
         if manual_tenant
           io << %( \\\n  <span class="c-flag">--tenant-id</span> <span class="c-val">#{tenant_id}</span>)
         end
@@ -128,15 +129,18 @@ class Portal::DashboardPage < PortalLayout
         end
         div class: "terminal-body" do
           raw <<-HTML
-<pre><span class="c-comment"># install (RHEL / Amazon Linux 2023)</span>
+<pre><span class="c-comment"># 1. Generate an age keypair (once, keep the private key safe)</span>
+<span class="c-comment">#    https://dirless.com/age-keypair.html  — or: age-keygen -o dirless-age.key</span>
+
+<span class="c-comment"># 2. Install packages (RHEL / Amazon Linux 2023)</span>
 <span class="c-cmd">curl</span> <span class="c-flag">-fsSL</span> <span class="c-val">https://dirless.com/rpm/dirless.repo</span> \
   <span class="c-flag">-o</span> /etc/yum.repos.d/dirless.repo
 <span class="c-cmd">dnf install</span> <span class="c-val">-y dirless-cli dirless-agent</span>
 
-<span class="c-comment"># enroll this host (also writes /etc/dirless/dirless-agent.toml)</span>
+<span class="c-comment"># 3. Enroll this host (also writes /etc/dirless/dirless-agent.toml)</span>
 #{enroll_command}
 
-<span class="c-comment"># start the agent</span>
+<span class="c-comment"># 4. Start the agent</span>
 <span class="c-cmd">systemctl enable</span> <span class="c-flag">--now</span> <span class="c-val">dirless-agent</span></pre>
 HTML
         end
