@@ -71,10 +71,8 @@ module Dirless
             customer = Customer.new(
               name: customer_name,
               hmac_secret: hmac_secret,
-              # Non-AWS customers have no aws_account_id to derive tenant_id from,
-              # so generate one now and persist it. The directory feature and the
-              # agent config both rely on this being stable.
-              tenant_id: "aws___" + Random::Secure.hex(32),
+              tenant_id: Random::Secure.hex(32),
+              cloud_provider: "dirless",
               email: email,
               password_hash: Customer.hash_password(password),
               first_name: first_name,

@@ -32,6 +32,7 @@ module Dirless
       column ca_private_key : String?
       column ca_public_key : String?
       column cert_ttl_seconds : Int64?
+      column cloud_provider : String?
 
       timestamps
 
@@ -79,6 +80,7 @@ module Dirless
           "server_limit"      => server_limit || Customer.limit_for_plan(plan),
           "ca_public_key"     => ca_public_key,
           "cert_ttl_seconds"  => cert_ttl_seconds,
+          "cloud_provider"    => cloud_provider || "dirless",
           "created_at"     => created_at.try(&.to_rfc3339),
           "updated_at"     => updated_at.try(&.to_rfc3339),
         }

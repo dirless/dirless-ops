@@ -19,7 +19,7 @@ module Dirless
           # doesn't match - this heals stale lazy-generated IDs from before
           # aws_account_id was populated.
           if (aid = customer.aws_account_id) && !aid.empty? && (secret = customer.hmac_secret)
-            canonical = "aws___" + OpenSSL::HMAC.hexdigest(:sha256, secret, aid)
+            canonical = OpenSSL::HMAC.hexdigest(:sha256, secret, aid)
             if customer.tenant_id != canonical
               customer.tenant_id = canonical
               customer.save
@@ -30,7 +30,7 @@ module Dirless
             return tid
           end
           # Lazy-init: no aws_account_id yet. Generate, persist, and return one now.
-          new_tid = "aws___" + Random::Secure.hex(32)
+          new_tid = Random::Secure.hex(32)
           customer.tenant_id = new_tid
           customer.save
           new_tid

@@ -170,6 +170,12 @@ module Dirless
       SQL
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_bootstrap_token ON ssh_bootstrap_tokens (token)",
       "CREATE INDEX IF NOT EXISTS idx_ssh_bootstrap_customer ON ssh_bootstrap_tokens (customer_name)",
+      # Migration: cloud_provider field ("aws" or "dirless") replaces the aws___ prefix convention.
+      "ALTER TABLE customers ADD COLUMN cloud_provider TEXT",
+      "UPDATE customers SET cloud_provider = 'aws' WHERE aws_account_id IS NOT NULL AND aws_account_id != ''",
+      "UPDATE customers SET cloud_provider = 'dirless' WHERE cloud_provider IS NULL",
+      # Strip the legacy aws___ prefix from any existing tenant_ids.
+      "UPDATE customers SET tenant_id = SUBSTR(tenant_id, 7) WHERE SUBSTR(tenant_id, 1, 6) = 'aws___'",
       # SSH CA: registered user keypairs (age public key + SSH public key per user).
       <<-SQL,
         CREATE TABLE IF NOT EXISTS ssh_user_registrations (

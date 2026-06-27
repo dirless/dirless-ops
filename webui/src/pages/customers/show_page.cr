@@ -28,6 +28,7 @@ class Customers::ShowPage < MainLayout
       field_row("Email", customer.email || "-")
       field_row("Company", customer.company || "-")
       field_row("Port", customer.port.to_s)
+      field_row("Cloud", customer.cloud_provider || "dirless")
       field_row("AWS Account ID", customer.aws_account_id || "-")
       field_row("Notes", customer.notes || "-")
       field_row("Created", customer.created_at || "-")

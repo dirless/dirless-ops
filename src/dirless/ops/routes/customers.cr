@@ -64,10 +64,11 @@ module Dirless
           # For non-AWS customers (no aws_account_id) generate a stable tenant_id
           # now so the directory feature always has one to work with.
           # AWS customers derive theirs at runtime from aws_account_id + hmac_secret.
+          is_aws = aws_id && !aws_id.empty?
           derived_tenant_id = if explicit_tenant_id
                                 explicit_tenant_id
-                              elsif aws_id.nil? || aws_id.empty?
-                                "aws___" + Random::Secure.hex(32)
+                              elsif !is_aws
+                                Random::Secure.hex(32)
                               end
 
           ca_private_key, ca_public_key = generate_ssh_ca(name)
@@ -79,6 +80,7 @@ module Dirless
             aws_account_id: aws_id,
             notes: parsed["notes"]?.try(&.as_s),
             tenant_id: derived_tenant_id,
+            cloud_provider: is_aws ? "aws" : "dirless",
             ca_private_key: ca_private_key,
             ca_public_key: ca_public_key,
           )
