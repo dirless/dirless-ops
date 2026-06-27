@@ -61,9 +61,7 @@ class Portal::DirectoryPage < PortalLayout
           text "No key registered yet"
         end
         para class: "dir-keygen-desc" do
-          text "Paste the age private key you used when enrolling this host with "
-          code "dirless-cli enroll --age-key"
-          text " below. It will be used to register the public key and decrypt your directory."
+          text "Paste your age private key below to register it and begin editing your directory."
         end
       end
     end
@@ -83,7 +81,7 @@ class Portal::DirectoryPage < PortalLayout
                          end
           text "Originally registered via #{source_label}: "
           code key
-          text " — paste the matching private key below."
+          text " - paste the matching private key below."
         end
         div class: "dir-recover-wrap" do
           a "Lost your key?", href: "#", id: "recover-toggle", class: "dir-recover-link"
@@ -296,7 +294,7 @@ import * as age from "https://esm.sh/age-encryption@0";
 
 let cloudUsers  = [];
 let localUsers  = [];
-let localGroups = [];  // [{name, gid, members: [username,...]}] — custom groups only
+let localGroups = [];  // [{name, gid, members: [username,...]}] - custom groups only
 let sshKeys     = {};  // username → newline-separated public keys string
 let identity    = null;
 
@@ -370,7 +368,7 @@ async function decryptBlob(b64, key) {
   const gzipped   = await d.decrypt(b64ToBytes(b64), "uint8array");
   const jsonBytes = await gunzip(gzipped);
   const payload   = JSON.parse(new TextDecoder().decode(jsonBytes));
-  // Filter out the auto-managed dirless-local group — we rebuild it on every save.
+  // Filter out the auto-managed dirless-local group - we rebuild it on every save.
   const groups = Array.isArray(payload.groups)
     ? payload.groups.filter(g => g.name !== LOCAL_GROUP_NAME)
     : [];
