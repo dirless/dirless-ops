@@ -14,13 +14,14 @@ module Dirless
       # Priority: explicit tenant_id → HMAC(hmac_secret, aws_account_id) → generated random.
       module DirectoryHelper
         private def resolve_tenant_id(customer : Customer) : String?
-          # When aws_account_id is known the canonical tenant_id is always
-          # HMAC(hmac_secret, aws_account_id). Update the stored value if it
-          # doesn't match - this heals stale lazy-generated IDs from before
-          # aws_account_id was populated.
-          if (aid = customer.aws_account_id) && !aid.empty? && (secret = customer.hmac_secret)
-            canonical = OpenSSL::HMAC.hexdigest(:sha256, secret, aid)
+          # tenant_id is normally set canonically at creation/update time
+          # (see customers.cr). This heal remains only for rows written before
+          # that, and is itself a hazard: rewriting the tenant strands any agent
+          # enrolled with the old value, so it must never fire for customers
+          # created after the fix.
+          if canonical = customer.canonical_tenant_id
             if customer.tenant_id != canonical
+              Log.warn { "healing stale tenant_id for #{customer.name}: agents enrolled with the old tenant_id must be re-enrolled" }
               customer.tenant_id = canonical
               customer.save
             end

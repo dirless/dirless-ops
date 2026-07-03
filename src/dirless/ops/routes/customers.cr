@@ -61,13 +61,16 @@ module Dirless
           explicit_tenant_id = parsed["tenant_id"]?.try(&.as_s)
           aws_id = parsed["aws_account_id"]?.try(&.as_s)
 
-          # For non-AWS customers (no aws_account_id) generate a stable tenant_id
-          # now so the directory feature always has one to work with.
-          # AWS customers derive theirs at runtime from aws_account_id + hmac_secret.
+          # Every customer gets a stable tenant_id at creation. AWS customers get
+          # the canonical HMAC(hmac_secret, aws_account_id); deriving it later
+          # (as resolve_tenant_id used to) changed the value after agents had
+          # already enrolled with the old one, stranding them.
           is_aws = aws_id && !aws_id.empty?
           derived_tenant_id = if explicit_tenant_id
                                 explicit_tenant_id
-                              elsif !is_aws
+                              elsif aws_id && !aws_id.empty?
+                                OpenSSL::HMAC.hexdigest(:sha256, hmac_secret, aws_id)
+                              else
                                 Random::Secure.hex(32)
                               end
 
@@ -99,7 +102,7 @@ module Dirless
               "ssh-keygen",
               args: ["-t", "ed25519", "-f", tmp_key, "-N", "", "-C", "dirless-ca-#{customer_name}"],
               output: Process::Redirect::Close,
-              error:  Process::Redirect::Close,
+              error: Process::Redirect::Close,
             )
             return {nil, nil} unless status.success?
             {File.read(tmp_key), File.read("#{tmp_key}.pub")}
@@ -164,6 +167,16 @@ module Dirless
           parsed["ca_private_key"]?.try { |v| customer.ca_private_key = v.as_s? }
           parsed["ca_public_key"]?.try { |v| customer.ca_public_key = v.as_s? }
           parsed["cert_ttl_seconds"]?.try { |v| (v.as_i64? || v.as_s?.try(&.to_i64?)).try { |n| customer.cert_ttl_seconds = n } }
+
+          # Changing the AWS linkage changes the canonical tenant_id - keep it in
+          # sync here rather than letting directory routes rewrite it later,
+          # after agents may have enrolled with the stale value. An explicit
+          # tenant_id in the same payload wins.
+          if (parsed["aws_account_id"]? || parsed["hmac_secret"]?) && parsed["tenant_id"]?.nil?
+            if canonical = customer.canonical_tenant_id
+              customer.tenant_id = canonical
+            end
+          end
 
           unless customer.save
             return context.put_status(422).json({"error" => customer.errors.map(&.message).join(", ")}).halt
