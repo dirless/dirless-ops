@@ -9,7 +9,7 @@ class Nodes::NewPage < MainLayout
     div class: "bg-white rounded-lg shadow-sm border border-gray-200 p-6 max-w-lg" do
       form action: "/nodes", method: "post" do
         field("Name", "name", placeholder: "node-0", required: true)
-        field("IP Address", "ip", placeholder: "69.87.217.231", required: true)
+        field("IP Address", "ip", placeholder: "203.0.113.10", required: true)
         field("Region", "region", placeholder: "USEAST2", required: true)
         field("Provider", "provider", placeholder: "atlanticnet", value: "atlanticnet")
         field("CPU Cores", "cpu_count", placeholder: "4")
