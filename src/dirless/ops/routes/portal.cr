@@ -5,6 +5,7 @@ require "dirless-http"
 require "../models/customer"
 require "../models/node"
 require "../models/provision_job"
+require "../registration_rules"
 
 module Dirless
   module Ops
@@ -13,10 +14,6 @@ module Dirless
 
       class PortalRegister
         include Grip::Controllers::HTTP
-
-        # Disposable-email domains that have been used for junk signups.
-        # Matched against the domain part and its subdomains.
-        BLOCKED_EMAIL_DOMAINS = ["web-library.net"]
 
         def post(context : Context) : Context
           body = context.request.body.try(&.gets_to_end) || ""
@@ -36,20 +33,7 @@ module Dirless
           # Accepts JSON boolean true or string "true".
           skip_verify = parsed["email_verified"]?.try { |v| v.as_bool? || v.as_s? == "true" } || false
 
-          errors = {} of String => String
-          errors["email"] = "Required" if email.empty?
-          errors["email"] = "Invalid email" unless email.empty? || email.matches?(/\A[^@\s]+@[^@\s]+\.[^@\s]+\z/)
-          if domain = email.split('@').last?
-            if BLOCKED_EMAIL_DOMAINS.any? { |blocked| domain == blocked || domain.ends_with?(".#{blocked}") }
-              errors["email"] = "Please use your work email address"
-            end
-          end
-          errors["password"] = "Required" if password.empty?
-          errors["password"] = "Must be at least 12 characters" if !password.empty? && password.size < 12
-          errors["first_name"] = "Required" if first_name.empty?
-          errors["last_name"] = "Required" if last_name.empty?
-          errors["company"] = "Required" if company.empty?
-          errors["country"] = "Required" if country.empty?
+          errors = RegistrationRules.validate(email, password, first_name, last_name, company, country)
 
           unless errors.empty?
             return context.put_status(422).json({"error" => errors.map { |field, msg| "#{field}: #{msg}" }.join("; "), "fields" => errors}).halt

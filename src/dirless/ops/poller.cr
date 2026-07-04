@@ -144,7 +144,8 @@ module Dirless
       # Delete stale unverified signups. Guards, in order: never touch a
       # provisioned account, a paid/upgraded plan, or an account that has a
       # Stripe customer (checkout was started) - those get human review.
-      private def purge_unverified
+      # Called from the poll loop; public so specs can exercise the guards.
+      def purge_unverified
         cutoff = Time.utc - UNVERIFIED_TTL
         Customer.where(email_verified: false, provisioned: false).select.each do |customer|
           created = customer.created_at
