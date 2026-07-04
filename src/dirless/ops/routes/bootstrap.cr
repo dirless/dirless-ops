@@ -37,10 +37,10 @@ module Dirless
             return context.put_status(400).json({"error" => "malformed JSON"}).halt
           end
 
-          email            = parsed["email"]?.try(&.as_s).to_s.strip.downcase
-          age_public_key   = parsed["age_public_key"]?.try(&.as_s).to_s.strip
-          ssh_public_key   = parsed["ssh_public_key"]?.try(&.as_s).to_s.strip
-          customer_name    = parsed["customer_name"]?.try(&.as_s).to_s.strip
+          email = parsed["email"]?.try(&.as_s).to_s.strip.downcase
+          age_public_key = parsed["age_public_key"]?.try(&.as_s).to_s.strip
+          ssh_public_key = parsed["ssh_public_key"]?.try(&.as_s).to_s.strip
+          customer_name = parsed["customer_name"]?.try(&.as_s).to_s.strip
           provided_username = parsed["username"]?.try(&.as_s).to_s.strip.downcase
 
           return context.put_status(422).json({"error" => "email required"}).halt if email.empty?
@@ -87,14 +87,14 @@ module Dirless
 
           token = Random::Secure.hex(32)
           record = SshBootstrapToken.new(
-            token:          token,
-            customer_name:  customer.name,
-            username:       username,
-            email:          email,
+            token: token,
+            customer_name: customer.name,
+            username: username,
+            email: email,
             age_public_key: age_public_key,
             ssh_public_key: ssh_public_key,
-            used:           false,
-            expires_at:     Time.utc + BOOTSTRAP_TOKEN_TTL,
+            used: false,
+            expires_at: Time.utc + BOOTSTRAP_TOKEN_TTL,
           )
           unless record.save
             return context.put_status(503).json({"error" => "service temporarily unavailable"}).halt
@@ -122,7 +122,7 @@ module Dirless
           return false unless VALID_SSH_KEY_TYPES.includes?(parts[0])
           begin
             decoded = Base64.decode(parts[1])
-            decoded.size >= 16  # minimum plausible key body
+            decoded.size >= 16 # minimum plausible key body
           rescue
             false
           end
@@ -199,7 +199,7 @@ module Dirless
           # Upsert the user registration outside the transaction — Granite ORM handles this.
           reg = SshUserRegistration.find_by(customer_name: cust_name, username: username) ||
                 SshUserRegistration.new(customer_name: cust_name, username: username)
-          reg.email          = email
+          reg.email = email
           reg.age_public_key = age_pub
           reg.ssh_public_key = ssh_pub
           unless reg.save

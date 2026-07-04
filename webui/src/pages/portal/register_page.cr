@@ -119,6 +119,14 @@ class Portal::RegisterPage
                 end
               end
 
+              # Honeypot: invisible to humans, dumb form-bots fill it in.
+              # CreateAccount silently drops submissions where it has a value.
+              div style: "position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden;", "aria-hidden": "true" do
+                label "Website", for: "website"
+                input type: "text", id: "website", name: "website", value: "",
+                  autocomplete: "off", tabindex: "-1"
+              end
+
               div class: "form-group" do
                 label "Password", for: "password", class: "form-label"
                 input type: "password", id: "password", name: "password",
@@ -146,9 +154,9 @@ class Portal::RegisterPage
                 div class: "plan-grid" do
                   selected_plan = @values["plan"]? || "free"
                   [
-                    {value: "free",   label: "Free",   price: "Free",    sub: "Up to 10 servers"},
-                    {value: "growth", label: "Growth", price: "$10/mo",  sub: "Up to 50 servers"},
-                    {value: "scale",  label: "Scale",  price: "$30/mo",  sub: "Up to 200 servers"},
+                    {value: "free", label: "Free", price: "Free", sub: "Up to 10 servers"},
+                    {value: "growth", label: "Growth", price: "$10/mo", sub: "Up to 50 servers"},
+                    {value: "scale", label: "Scale", price: "$30/mo", sub: "Up to 200 servers"},
                   ].each do |plan|
                     checked = selected_plan == plan[:value]
                     div class: "plan-card #{"plan-card-selected" if checked}" do

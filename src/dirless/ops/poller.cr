@@ -5,11 +5,16 @@ require "dirless-http"
 require "./models/customer"
 require "./models/node"
 require "./models/health_check"
+require "./models/provision_job"
 
 module Dirless
   module Ops
     class Poller
       RETENTION_HOURS = 24
+      # Unverified accounts are throwaway signups (usually bots) - delete them
+      # after this window. Never touches provisioned, paid, or checkout-started
+      # accounts; see purge_unverified.
+      UNVERIFIED_TTL = 2.hours
 
       def initialize(@interval_seconds : Int32)
       end
@@ -20,6 +25,7 @@ module Dirless
             begin
               poll
               prune
+              purge_unverified
             rescue ex
               Log.error(exception: ex) { "poller cycle failed" }
             end
@@ -77,7 +83,7 @@ module Dirless
                 Log.info { "poller: stored aws_account_id=#{reported_id} tenant_id=#{canonical_tid} for customer #{customer.name}" }
               elsif stored_id != reported_id
                 Log.error { "poller: aws_account_id conflict for customer #{customer.name}: " \
-                             "stored=#{stored_id}, reported=#{reported_id}" }
+                            "stored=#{stored_id}, reported=#{reported_id}" }
               end
             end
           end
@@ -133,6 +139,25 @@ module Dirless
       private def prune
         cutoff = Time.utc - RETENTION_HOURS.hours
         HealthCheck.where(:checked_at, :lt, cutoff).delete
+      end
+
+      # Delete stale unverified signups. Guards, in order: never touch a
+      # provisioned account, a paid/upgraded plan, or an account that has a
+      # Stripe customer (checkout was started) - those get human review.
+      private def purge_unverified
+        cutoff = Time.utc - UNVERIFIED_TTL
+        Customer.where(email_verified: false, provisioned: false).select.each do |customer|
+          created = customer.created_at
+          next unless created && created < cutoff
+          plan = customer.plan
+          next if plan && plan != "free"
+          stripe_id = customer.stripe_customer_id
+          next if stripe_id && !stripe_id.empty?
+
+          ProvisionJob.where(customer_name: customer.name).delete
+          customer.destroy
+          Log.info { "purged unverified account #{customer.name} (#{customer.email}, registered #{created})" }
+        end
       end
     end
   end

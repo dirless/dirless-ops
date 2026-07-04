@@ -38,6 +38,9 @@ module Dirless
 
           #{link}
 
+        This link is valid for 2 hours. Unverified accounts are removed after
+        that, but you can always register again.
+
         If you didn't create a Dirless account, you can safely ignore this email.
 
         - The Dirless team

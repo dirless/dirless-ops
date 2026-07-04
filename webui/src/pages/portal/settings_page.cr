@@ -14,13 +14,13 @@ class Portal::SettingsPage < PortalLayout
     raw "<style>#{settings_css}</style>"
 
     ttl_seconds = (@cert_ttl_seconds || (8 * 3600_i64)).to_i64
-    ttl_hours   = ttl_seconds // 3600_i64
+    ttl_hours = ttl_seconds // 3600_i64
     if ttl_hours >= 24_i64 && ttl_hours % 24_i64 == 0_i64
       ttl_value = (ttl_hours // 24_i64).to_s
-      ttl_unit  = "days"
+      ttl_unit = "days"
     else
       ttl_value = ttl_hours.to_s
-      ttl_unit  = "hours"
+      ttl_unit = "hours"
     end
 
     div class: "s-card" do
@@ -38,10 +38,10 @@ class Portal::SettingsPage < PortalLayout
         tag "select", name: "ttl_unit", class: "s-ttl-select" do
           if ttl_unit == "hours"
             option "Hours", value: "hours", selected: "selected"
-            option "Days",  value: "days"
+            option "Days", value: "days"
           else
             option "Hours", value: "hours"
-            option "Days",  value: "days", selected: "selected"
+            option "Days", value: "days", selected: "selected"
           end
         end
         button "Save", type: "submit", class: "btn btn-primary"

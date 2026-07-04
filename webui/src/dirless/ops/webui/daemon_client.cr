@@ -134,7 +134,7 @@ module Dirless
           )
           return {nil, nil} unless response.success?
           parsed = JSON.parse(response.body)
-          key    = parsed["age_public_key"]?.try(&.as_s?)
+          key = parsed["age_public_key"]?.try(&.as_s?)
           source = parsed["age_public_key_source"]?.try(&.as_s?)
           {key, source}
         end

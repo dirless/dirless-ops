@@ -95,8 +95,14 @@ module Dirless
             job.save
 
             db.exec("COMMIT")
-            Ops.notifier.welcome(email, company, customer_name)
-            Ops.notifier.verify_email(email, verify_token) unless skip_verify
+            # Verification-first: the welcome email is sent when the address is
+            # verified (PortalVerifyEmail). Until then we only ever send the
+            # verification mail, so a bot signup produces at most one message.
+            if skip_verify
+              Ops.notifier.welcome(email, company, customer_name)
+            else
+              Ops.notifier.verify_email(email, verify_token)
+            end
           rescue ex
             db.exec("ROLLBACK") rescue nil
             Log.error { "Registration failed for #{email}: #{ex.class}: #{ex.message}" }
@@ -104,23 +110,8 @@ module Dirless
             return context.put_status(503).json({"error" => "Service temporarily unavailable, please try again"}).halt
           end
 
-          if stripe = Ops.stripe_client
-            begin
-              beta = Ops.config.beta_mode
-              meta = {"customer_name" => customer_name}
-              meta["beta"] = "true" if beta
-              stripe_id = stripe.create_customer(
-                email: email,
-                name: "#{first_name} #{last_name}",
-                metadata: meta
-              )
-              customer.stripe_customer_id = stripe_id
-              customer.beta_customer = beta
-              customer.save
-            rescue ex
-              Log.error { "Stripe customer creation failed for #{email}: #{ex.message}" }
-            end
-          end
+          # No Stripe customer here: it is created lazily at checkout
+          # (PortalCreateCheckout), so throwaway signups leave nothing in Stripe.
 
           context.put_status(201).json(customer.to_response).halt
         end
@@ -154,8 +145,23 @@ module Dirless
           customer = Customer.find_by(name: customer_name)
           return context.put_status(404).json({"error" => "account not found"}).halt unless customer
 
+          # Created lazily on first checkout (not at registration) so that
+          # signups that never reach checkout leave nothing in Stripe.
           stripe_customer_id = customer.stripe_customer_id
-          return context.put_status(422).json({"error" => "no stripe customer on record"}).halt unless stripe_customer_id
+          if stripe_customer_id.nil? || stripe_customer_id.empty?
+            begin
+              stripe_customer_id = stripe.create_customer(
+                email: customer.email.to_s,
+                name: "#{customer.first_name} #{customer.last_name}",
+                metadata: {"customer_name" => customer.name}
+              )
+              customer.stripe_customer_id = stripe_customer_id
+              customer.save
+            rescue ex
+              Log.error { "Stripe customer creation failed for #{customer.email}: #{ex.message}" }
+              return context.put_status(502).json({"error" => "failed to create checkout session"}).halt
+            end
+          end
 
           beta = Ops.config.beta_mode
           price_key = beta ? "#{plan}_beta" : "#{plan}_full"
@@ -254,6 +260,10 @@ module Dirless
             return context.put_status(422).json({"error" => "could not verify email"}).halt
           end
 
+          # Verification-first email flow: welcome lands only once the address
+          # is proven real.
+          Ops.notifier.welcome(customer.email.to_s, customer.company.to_s, customer.name)
+
           context.put_status(200).json(customer.to_response).halt
         end
       end
@@ -302,8 +312,8 @@ module Dirless
       class PortalUpdateSettings
         include Grip::Controllers::HTTP
 
-        MIN_TTL =       3_600_i64  # 1 hour
-        MAX_TTL = 2_592_000_i64  # 30 days
+        MIN_TTL =     3_600_i64 # 1 hour
+        MAX_TTL = 2_592_000_i64 # 30 days
 
         def patch(context : Context) : Context
           body = context.request.body.try(&.gets_to_end) || ""
@@ -313,7 +323,7 @@ module Dirless
             return context.put_status(400).json({"error" => "malformed JSON"}).halt
           end
 
-          customer_name    = parsed["customer_name"]?.try(&.as_s).to_s.strip
+          customer_name = parsed["customer_name"]?.try(&.as_s).to_s.strip
           cert_ttl_seconds = parsed["cert_ttl_seconds"]?.try(&.as_i64?)
 
           return context.put_status(422).json({"error" => "customer_name required"}).halt if customer_name.empty?

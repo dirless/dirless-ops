@@ -4,6 +4,12 @@ class Portal::CreateAccount < Lucky::Action
   PAID_PLANS = {"growth", "scale"}
 
   post "/register" do
+    # Honeypot (see RegisterPage): humans never see the field, bots fill it.
+    # Pretend success so the bot learns nothing; create no account.
+    unless params.get?(:website).to_s.empty?
+      return redirect to: "/login"
+    end
+
     email = params.get?(:email).to_s.strip
     password = params.get?(:password).to_s
     confirm = params.get?(:confirm_password).to_s

@@ -1,7 +1,7 @@
 class Portal::AuthzRuleAdd < PortalAction
   post "/settings/authz-rule-add" do
     group = params.get?(:group).to_s.strip
-    host  = params.get?(:host).to_s.strip
+    host = params.get?(:host).to_s.strip
 
     unless group.empty? || host.empty?
       begin

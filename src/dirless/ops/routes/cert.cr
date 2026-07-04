@@ -30,7 +30,7 @@ module Dirless
           end
 
           customer_name = parsed["customer_name"]?.try(&.as_s).to_s.strip
-          username      = parsed["username"]?.try(&.as_s).to_s.strip
+          username = parsed["username"]?.try(&.as_s).to_s.strip
 
           return context.put_status(422).json({"error" => "customer_name required"}).halt if customer_name.empty?
           return context.put_status(422).json({"error" => "username required"}).halt if username.empty?
@@ -58,9 +58,9 @@ module Dirless
 
           challenge = SshChallenge.new(
             customer_name: customer_name,
-            username:      username,
-            nonce_hash:    nonce_hash,
-            expires_at:    Time.utc + CHALLENGE_TTL,
+            username: username,
+            nonce_hash: nonce_hash,
+            expires_at: Time.utc + CHALLENGE_TTL,
           )
           unless challenge.save
             return context.put_status(503).json({"error" => "could not store challenge"}).halt
@@ -94,8 +94,8 @@ module Dirless
           end
 
           customer_name = parsed["customer_name"]?.try(&.as_s).to_s.strip
-          username      = parsed["username"]?.try(&.as_s).to_s.strip
-          nonce         = parsed["nonce"]?.try(&.as_s).to_s.strip
+          username = parsed["username"]?.try(&.as_s).to_s.strip
+          nonce = parsed["nonce"]?.try(&.as_s).to_s.strip
 
           return context.put_status(422).json({"error" => "customer_name required"}).halt if customer_name.empty?
           return context.put_status(422).json({"error" => "username required"}).halt if username.empty?
@@ -136,9 +136,9 @@ module Dirless
           certificate = sign_certificate(
             ca_private_key: ca_private_key,
             ssh_public_key: reg.ssh_public_key,
-            username:       username,
-            customer_name:  customer_name,
-            ttl_seconds:    ttl_seconds,
+            username: username,
+            customer_name: customer_name,
+            ttl_seconds: ttl_seconds,
           )
 
           case certificate
@@ -157,11 +157,11 @@ module Dirless
                                      username : String, customer_name : String,
                                      ttl_seconds : Int64) : String?
           SSH::Certificate.sign(
-            ca_pem:               ca_private_key,
+            ca_pem: ca_private_key,
             user_public_key_line: ssh_public_key,
-            key_id:               "#{username}@#{customer_name}",
-            principals:           [username],
-            ttl_seconds:          ttl_seconds,
+            key_id: "#{username}@#{customer_name}",
+            principals: [username],
+            ttl_seconds: ttl_seconds,
           )
         rescue ex
           Log.error { "sign_certificate error: #{ex.message}" }
