@@ -82,3 +82,21 @@ describe "Poller#purge_unverified" do
     surviving_names.should eq ["new-5017", "real-5016"]
   end
 end
+
+describe "Poller#vacuum_if_due" do
+  it "runs VACUUM and the database stays functional" do
+    SpecHelper.clean_tables
+    poller = Dirless::Ops::Poller.new(3600)
+    SpecHelper.make_customer("vac-5020", "v@user.test", verified: true)
+    poller.vacuum_if_due
+    Dirless::Ops::Customer.find_by!(name: "vac-5020").email.should eq "v@user.test"
+  end
+
+  it "does not run again within the interval" do
+    poller = Dirless::Ops::Poller.new(3600)
+    poller.vacuum_if_due
+    started = Time.instant
+    poller.vacuum_if_due # second call must be a no-op (returns instantly)
+    (Time.instant - started).total_seconds.should be < 0.5
+  end
+end

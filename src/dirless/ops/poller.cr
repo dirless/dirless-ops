@@ -15,6 +15,14 @@ module Dirless
       # after this window. Never touches provisioned, paid, or checkout-started
       # accounts; see purge_unverified.
       UNVERIFIED_TTL = 2.hours
+      # TPDB never reclaims pages freed by DELETE (same trap the agent's
+      # local_db avoids with DROP+CREATE), so the health-check churn bloats
+      # ops.db without bound - it hit 153 MB in production and dashboard
+      # queries took 300-400ms each. VACUUM once per day, and once at boot
+      # so a deploy compacts an already-bloated file.
+      VACUUM_INTERVAL = 24.hours
+
+      @last_vacuum : Time? = nil
 
       def initialize(@interval_seconds : Int32)
       end
@@ -26,12 +34,23 @@ module Dirless
               poll
               prune
               purge_unverified
+              vacuum_if_due
             rescue ex
               Log.error(exception: ex) { "poller cycle failed" }
             end
             sleep @interval_seconds.seconds
           end
         end
+      end
+
+      # Public for specs.
+      def vacuum_if_due
+        last = @last_vacuum
+        return if last && Time.utc - last < VACUUM_INTERVAL
+        started = Time.instant
+        Granite::Connections["sqlite"].not_nil![:writer].database.exec("VACUUM")
+        @last_vacuum = Time.utc
+        Log.info { "ops.db VACUUM completed in #{(Time.instant - started).total_seconds.round(1)}s" }
       end
 
       private def poll
