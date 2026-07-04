@@ -14,6 +14,10 @@ module Dirless
       class PortalRegister
         include Grip::Controllers::HTTP
 
+        # Disposable-email domains that have been used for junk signups.
+        # Matched against the domain part and its subdomains.
+        BLOCKED_EMAIL_DOMAINS = ["web-library.net"]
+
         def post(context : Context) : Context
           body = context.request.body.try(&.gets_to_end) || ""
           begin
@@ -35,6 +39,11 @@ module Dirless
           errors = {} of String => String
           errors["email"] = "Required" if email.empty?
           errors["email"] = "Invalid email" unless email.empty? || email.matches?(/\A[^@\s]+@[^@\s]+\.[^@\s]+\z/)
+          if domain = email.split('@').last?
+            if BLOCKED_EMAIL_DOMAINS.any? { |blocked| domain == blocked || domain.ends_with?(".#{blocked}") }
+              errors["email"] = "Please use your work email address"
+            end
+          end
           errors["password"] = "Required" if password.empty?
           errors["password"] = "Must be at least 12 characters" if !password.empty? && password.size < 12
           errors["first_name"] = "Required" if first_name.empty?
