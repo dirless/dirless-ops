@@ -147,8 +147,8 @@ class Portal::RegisterPage
                   selected_plan = @values["plan"]? || "free"
                   [
                     {value: "free",   label: "Free",   price: "Free",    sub: "Up to 10 servers"},
-                    {value: "growth", label: "Growth", price: "$5/mo",   sub: "Up to 50 servers"},
-                    {value: "scale",  label: "Scale",  price: "$15/mo",  sub: "Up to 200 servers"},
+                    {value: "growth", label: "Growth", price: "$10/mo",  sub: "Up to 50 servers"},
+                    {value: "scale",  label: "Scale",  price: "$30/mo",  sub: "Up to 200 servers"},
                   ].each do |plan|
                     checked = selected_plan == plan[:value]
                     div class: "plan-card #{"plan-card-selected" if checked}" do
